@@ -65,13 +65,13 @@ export default function RadioPlayerBar() {
                 <SignalHigh className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-red-600 animate-pulse" />
                 {currentTrack.isLiveStream ? 'LIVE ON AIR' : 'ON-DEMAND'}
               </span>
-              <span className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 shrink-0">• 320 KBPS HD</span>
+              <span className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 shrink-0 font-medium">• 320 KBPS HD</span>
             </div>
-            <p className="text-xs sm:text-sm font-bold truncate text-slate-900 dark:text-white max-w-[200px] xs:max-w-[280px] md:max-w-md leading-tight">
-              {currentTrack.title}
+            <p className="text-xs sm:text-sm font-bold truncate text-slate-900 dark:text-white leading-tight mt-0.5">
+              {currentTrack.title || 'The 0600 Hours Continental Intelligence Briefing'}
             </p>
-            <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 truncate block">
-              {currentTrack.host ? `Host: ${currentTrack.host}` : currentTrack.subtitle}
+            <p className="text-[10px] sm:text-xs text-slate-600 dark:text-slate-400 truncate block mt-0.5">
+              Host: {currentTrack.host ? (currentTrack.host.startsWith('Host:') ? currentTrack.host.replace(/^Host:\s*/, '') : currentTrack.host) : 'Brigadier General (Ret.) Sarah Mwangi & Dr. Amina Touré'}
             </p>
           </div>
         </div>

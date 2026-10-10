@@ -65,7 +65,8 @@ import {
   WifiOff,
   FileCode,
   Lock,
-  Key
+  Key,
+  Flame
 } from 'lucide-react';
 import SocialIcon from '@/components/SocialIcon';
 import { CATEGORIES, SPECIALIZED_HUBS } from '@/lib/data/categories';
@@ -1919,6 +1920,22 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                           </Link>
 
                           <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => {
+                                setArticlesList(articlesList.map(a => a.id === art.id ? { ...a, isTrending: !a.isTrending } : a));
+                                showToast(`Story "${art.title.slice(0, 25)}..." ${art.isTrending ? 'removed from Trending' : 'promoted to Trending'}.`);
+                              }}
+                              className={`px-2 py-1 rounded text-[10px] font-bold border transition-colors flex items-center gap-1 ${
+                                art.isTrending 
+                                  ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700' 
+                                  : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-amber-500'
+                              }`}
+                              title="Promote story to Trending / Hero on Homepage"
+                            >
+                              <Flame className={`w-3 h-3 ${art.isTrending ? 'text-amber-600 dark:text-amber-400 fill-amber-500' : 'text-slate-400'}`} />
+                              <span>{art.isTrending ? 'Promoted' : 'Promote'}</span>
+                            </button>
+
                             <button
                               onClick={() => {
                                 setArticlesList(articlesList.map(a => a.id === art.id ? { ...a, isBreaking: !a.isBreaking } : a));
