@@ -373,26 +373,24 @@ export default function HeroFeatured() {
           </div>
 
           {/* Cards List */}
-          <div className="grid grid-cols-1 gap-2.5 flex-1">
+          <div className="grid grid-cols-1 gap-2 sm:gap-2.5 flex-1">
             {sideQueue.map((story) => {
-              const originalIndex = TRENDING_HERO_STORIES.findIndex((s) => s.id === story.id);
-
               return (
-                <div
+                <Link
                   key={story.id}
-                  onClick={() => setCurrentIndex(originalIndex)}
-                  className="group p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-600 dark:hover:border-amber-500 transition-all flex gap-3 shadow-xs hover:shadow-md cursor-pointer"
+                  href={`/article/${story.slug}`}
+                  className="group p-2 sm:p-2.5 lg:p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-600 dark:hover:border-amber-500 transition-all flex gap-2.5 sm:gap-3 shadow-xs hover:shadow-md cursor-pointer"
                 >
                   {/* Photo Thumbnail */}
-                  <div className="relative w-24 h-24 rounded-lg overflow-hidden shrink-0 bg-slate-900">
+                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-lg overflow-hidden shrink-0 bg-slate-900">
                     <Image
                       src={story.image}
                       alt={story.title}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
-                      sizes="96px"
+                      sizes="(max-width: 640px) 64px, (max-width: 1024px) 80px, 96px"
                     />
-                    <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-slate-900/90 text-amber-300">
+                    <span className="absolute bottom-0.5 left-0.5 sm:bottom-1 sm:left-1 px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded text-[7.5px] sm:text-[8px] font-bold uppercase tracking-wider bg-slate-900/90 text-amber-300">
                       {story.threatLevel}
                     </span>
                   </div>
@@ -400,42 +398,42 @@ export default function HeroFeatured() {
                   {/* Details */}
                   <div className="flex-1 flex flex-col justify-between min-w-0">
                     <div>
-                      <div className="flex items-center justify-between gap-1 text-[10px] text-slate-500 dark:text-slate-400 mb-0.5">
+                      <div className="flex items-center justify-between gap-1 text-[9.5px] sm:text-[10px] text-slate-500 dark:text-slate-400 mb-0.5">
                         <span className="font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider truncate">
                           {story.category}
                         </span>
-                        <span className="shrink-0 font-mono">{story.timeAgo}</span>
+                        <span className="shrink-0 font-mono text-[9px] sm:text-[10px]">{story.timeAgo}</span>
                       </div>
 
-                      <h3 className="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors line-clamp-2 leading-snug">
+                      <h3 className="text-[11.5px] sm:text-xs lg:text-[13px] font-bold text-slate-900 dark:text-white group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors line-clamp-2 leading-snug">
                         {story.title}
                       </h3>
 
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                      <p className="text-[9.5px] sm:text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5 hidden xs:block">
                         {story.summary}
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between pt-1 mt-1 border-t border-slate-100 dark:border-slate-800/80 text-[10px] text-slate-500 dark:text-slate-400">
-                      <span className="flex items-center gap-1 truncate max-w-[130px]">
+                    <div className="flex items-center justify-between pt-1 mt-1 border-t border-slate-100 dark:border-slate-800/80 text-[9.5px] sm:text-[10px] text-slate-500 dark:text-slate-400">
+                      <span className="flex items-center gap-1 truncate max-w-[110px] sm:max-w-[130px]">
                         <MapPin className="w-2.5 h-2.5 text-amber-500 shrink-0" />
                         <span className="truncate">{story.location}</span>
                       </span>
 
-                      <span className="text-amber-700 dark:text-amber-400 group-hover:text-amber-800 font-bold flex items-center gap-0.5 shrink-0">
-                        <span>Promote</span>
+                      <span className="text-amber-700 dark:text-amber-400 group-hover:text-amber-800 dark:group-hover:text-amber-300 font-bold flex items-center gap-0.5 shrink-0">
+                        <span>Read</span>
                         <ArrowRight className="w-2.5 h-2.5" />
                       </span>
                     </div>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
 
           {/* Indicators */}
-          <div className="flex items-center justify-between pt-1 px-1 text-[10px] text-slate-500 dark:text-slate-400">
-            <span className="font-mono">Auto-rotates • Click any card to promote</span>
+          <div className="flex items-center justify-between pt-1 px-1 text-[9.5px] sm:text-[10px] text-slate-500 dark:text-slate-400">
+            <span className="font-mono">Auto-rotates • Click story to read</span>
             <div className="flex items-center gap-1.5">
               {TRENDING_HERO_STORIES.map((_, idx) => (
                 <button
