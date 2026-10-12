@@ -492,3 +492,41 @@ ON CONFLICT (slug) DO UPDATE SET
     name = EXCLUDED.name,
     pillar = EXCLUDED.pillar,
     description = EXCLUDED.description;
+
+-- =========================================================================
+-- 8. READER ACCOUNTS & RESEND EMAIL VERIFICATION REGISTRY
+-- =========================================================================
+
+-- 8.1 Reader Accounts Table
+CREATE TABLE IF NOT EXISTS public.reader_accounts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    full_name VARCHAR(200) NOT NULL,
+    display_name VARCHAR(150),
+    role VARCHAR(50) DEFAULT 'reader',
+    is_verified BOOLEAN DEFAULT FALSE,
+    verified_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 8.2 Email OTP Verifications Table
+CREATE TABLE IF NOT EXISTS public.email_verifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    code VARCHAR(10) NOT NULL,
+    full_name VARCHAR(200),
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.reader_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.email_verifications ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public read for reader accounts" ON public.reader_accounts;
+CREATE POLICY "Public read for reader accounts" ON public.reader_accounts FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Service role control for reader accounts" ON public.reader_accounts;
+CREATE POLICY "Service role control for reader accounts" ON public.reader_accounts FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Service role control for email verifications" ON public.email_verifications;
+CREATE POLICY "Service role control for email verifications" ON public.email_verifications FOR ALL USING (true);

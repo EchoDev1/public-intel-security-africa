@@ -5,29 +5,37 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState('signin'); // 'signin' | 'create' | 'signout'
-
-  // Persist state in localStorage if available
-  useEffect(() => {
+  const [user, setUser] = useState(() => {
+    if (typeof window === 'undefined') return null;
     try {
       const storedAuth = localStorage.getItem('pi-auth-state');
       if (storedAuth) {
         const parsed = JSON.parse(storedAuth);
-        // Purge old demo user if found
-        if (parsed?.user?.email === 'iamharriswalter@gmail.com') {
-          localStorage.removeItem('pi-auth-state');
-          setIsLoggedIn(false);
-          setUser(null);
-        } else if (parsed?.isLoggedIn && parsed?.user) {
-          setIsLoggedIn(true);
-          setUser(parsed.user);
+        if (parsed?.user?.email !== 'iamharriswalter@gmail.com' && parsed?.isLoggedIn && parsed?.user) {
+          return parsed.user;
         }
       }
     } catch (_) {}
-  }, []);
+    return null;
+  });
+
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const storedAuth = localStorage.getItem('pi-auth-state');
+      if (storedAuth) {
+        const parsed = JSON.parse(storedAuth);
+        if (parsed?.user?.email !== 'iamharriswalter@gmail.com' && parsed?.isLoggedIn && parsed?.user) {
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  });
+
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState('signin'); // 'signin' | 'create' | 'verify' | 'signout'
+  const [pendingEmail, setPendingEmail] = useState('');
 
   const saveState = (loggedIn, userData) => {
     setIsLoggedIn(loggedIn);
@@ -44,77 +52,161 @@ export function AuthProvider({ children }) {
     } catch (_) {}
   };
 
-  const signIn = (email, password, role) => {
+  /**
+   * Sign In via backend API (triggers security login email notification)
+   */
+  const signIn = async (email, password, role) => {
     const cleanEmail = (email || '').trim().toLowerCase();
     const isDakoreAdmin = cleanEmail === 'ekpendudakore@gmail.com';
 
-    // Validate admin credentials
-    if (isDakoreAdmin) {
-      if (password !== 'ladydakore@artellium90') {
-        return { success: false, error: 'Invalid admin credentials. Please enter the correct password.' };
+    // Validate admin credentials upfront if admin email
+    if (isDakoreAdmin && password !== 'ladydakore@artellium90') {
+      return { success: false, error: 'Invalid admin credentials. Please enter the correct password.' };
+    }
+
+    try {
+      const response = await fetch('/api/auth/signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, password, role })
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.requiresVerification) {
+          setPendingEmail(cleanEmail);
+          setAuthModalMode('verify');
+          return { success: false, requiresVerification: true, error: data.error };
+        }
+        return { success: false, error: data.error || 'Invalid credentials.' };
       }
-      const adminUser = {
-        displayName: 'Lady Dakore',
-        fullName: 'Lady Dakore Ekpendu',
-        email: 'Ekpendudakore@gmail.com',
-        role: 'admin',
-        joinedDate: 'September 2026',
-        bio: 'Executive Director & Chief Editor',
-        avatarInitial: 'D'
-      };
-      saveState(true, adminUser);
+
+      saveState(true, data.user);
       setIsAuthModalOpen(false);
-      return { success: true, user: adminUser, isAdmin: true, redirectTo: '/admin' };
+      return { 
+        success: true, 
+        user: data.user, 
+        isAdmin: data.isAdmin || data.user?.role === 'admin', 
+        redirectTo: data.redirectTo || '/dashboard' 
+      };
+    } catch (err) {
+      // Local fallback for super admin in isolated dev environments
+      if (isDakoreAdmin && password === 'ladydakore@artellium90') {
+        const adminUser = {
+          displayName: 'Lady Dakore',
+          fullName: 'Lady Dakore Ekpendu',
+          email: 'Ekpendudakore@gmail.com',
+          role: 'admin',
+          joinedDate: 'September 2026',
+          bio: 'Executive Director & Chief Editor',
+          avatarInitial: 'D'
+        };
+        saveState(true, adminUser);
+        setIsAuthModalOpen(false);
+        return { success: true, user: adminUser, isAdmin: true, redirectTo: '/admin' };
+      }
+      return { success: false, error: err.message || 'Network error during sign-in.' };
     }
-
-    // Reject non-admin role elevation attempts
-    if (role === 'admin' && !isDakoreAdmin) {
-      return { success: false, error: 'Unauthorized. Admin credentials required.' };
-    }
-
-    // Standard reader sign-in
-    if (!cleanEmail) {
-      return { success: false, error: 'Please enter a valid email address.' };
-    }
-
-    const namePart = cleanEmail.split('@')[0];
-    const readerUser = {
-      displayName: namePart,
-      fullName: namePart.charAt(0).toUpperCase() + namePart.slice(1),
-      email: (email || '').trim(),
-      role: 'reader',
-      joinedDate: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-      bio: 'Reader Member',
-      avatarInitial: cleanEmail.charAt(0).toUpperCase()
-    };
-    saveState(true, readerUser);
-    setIsAuthModalOpen(false);
-    return { success: true, user: readerUser, isAdmin: false, redirectTo: '/dashboard' };
   };
 
   const loginAsAdmin = (email, password) => {
     return signIn(email, password, 'admin');
   };
 
-  const createAccount = ({ displayName, fullName, email, password }) => {
+  /**
+   * Create Account via backend API (triggers 6-digit OTP verification email via Resend)
+   * DOES NOT log the user in automatically.
+   */
+  const createAccount = async ({ displayName, fullName, email, password }) => {
     const cleanEmail = (email || '').trim().toLowerCase();
+
     if (cleanEmail === 'ekpendudakore@gmail.com') {
       return signIn(email, password, 'admin');
     }
 
-    const name = displayName || cleanEmail.split('@')[0];
-    const newUser = {
-      displayName: name,
-      fullName: fullName || name,
-      email: (email || '').trim(),
-      role: 'reader',
-      joinedDate: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-      bio: 'Reader Member',
-      avatarInitial: (name || 'u').charAt(0).toUpperCase()
-    };
-    saveState(true, newUser);
-    setIsAuthModalOpen(false);
-    return { success: true, user: newUser, isAdmin: false, redirectTo: '/dashboard' };
+    try {
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          fullName: fullName || displayName, 
+          email: cleanEmail, 
+          password 
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { success: false, error: data.error || 'Failed to create account.' };
+      }
+
+      setPendingEmail(cleanEmail);
+      setAuthModalMode('verify');
+      return { 
+        success: true, 
+        pendingVerification: true, 
+        email: cleanEmail, 
+        message: data.message 
+      };
+    } catch (err) {
+      return { success: false, error: err.message || 'Network error creating account.' };
+    }
+  };
+
+  /**
+   * Verify 6-digit OTP code (Activates account and logs user in)
+   */
+  const verifyCode = async (email, code) => {
+    try {
+      const response = await fetch('/api/auth/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email || pendingEmail, code })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { success: false, error: data.error || 'Verification failed.' };
+      }
+
+      // Account verified: Activate session and log user in
+      saveState(true, data.user);
+      setIsAuthModalOpen(false);
+      return { 
+        success: true, 
+        user: data.user, 
+        redirectTo: '/dashboard',
+        message: data.message
+      };
+    } catch (err) {
+      return { success: false, error: err.message || 'Network error verifying code.' };
+    }
+  };
+
+  /**
+   * Resend 6-digit verification code
+   */
+  const resendVerificationCode = async (email) => {
+    try {
+      const targetEmail = email || pendingEmail;
+      const response = await fetch('/api/auth/resend-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: targetEmail })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { success: false, error: data.error || 'Failed to resend code.' };
+      }
+
+      return { success: true, message: data.message };
+    } catch (err) {
+      return { success: false, error: err.message || 'Network error resending code.' };
+    }
   };
 
   const signOut = () => {
@@ -123,7 +215,7 @@ export function AuthProvider({ children }) {
   };
 
   const openAuthModal = (mode = 'signin') => {
-    if (isLoggedIn && mode !== 'create' && mode !== 'signin') {
+    if (isLoggedIn && mode !== 'create' && mode !== 'signin' && mode !== 'verify') {
       setAuthModalMode('signout');
     } else {
       setAuthModalMode(mode);
@@ -143,11 +235,15 @@ export function AuthProvider({ children }) {
         isAuthModalOpen,
         authModalMode,
         setAuthModalMode,
+        pendingEmail,
+        setPendingEmail,
         openAuthModal,
         closeAuthModal,
         signIn,
         loginAsAdmin,
         createAccount,
+        verifyCode,
+        resendVerificationCode,
         signOut
       }}
     >

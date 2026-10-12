@@ -14,11 +14,13 @@ import {
   ShieldCheck, 
   Eye, 
   EyeOff, 
-  ExternalLink,
-  Shield,
-  Bookmark,
-  Bell,
-  ArrowRight
+  Shield, 
+  Bookmark, 
+  Bell, 
+  ArrowRight,
+  RefreshCw,
+  KeyRound,
+  ArrowLeft
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -30,9 +32,13 @@ export default function UserAuthModal() {
     isAuthModalOpen, 
     authModalMode, 
     setAuthModalMode, 
+    pendingEmail,
+    setPendingEmail,
     closeAuthModal, 
     signIn, 
     createAccount, 
+    verifyCode,
+    resendVerificationCode,
     signOut 
   } = useAuth();
 
@@ -52,14 +58,20 @@ export default function UserAuthModal() {
     rememberMe: true
   });
 
+  // 6-digit OTP verification state
+  const [otpCode, setOtpCode] = useState('');
+  const [isResending, setIsResending] = useState(false);
+
   const [showPassword, setShowPassword] = useState(false);
   const [statusMessage, setStatusMessage] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isAuthModalOpen) return null;
 
+  const targetEmail = pendingEmail || createForm.email || signInForm.email;
+
   // Handle Create Account Submission
-  const handleCreateAccount = (e) => {
+  const handleCreateAccount = async (e) => {
     e.preventDefault();
     setStatusMessage(null);
 
@@ -80,36 +92,78 @@ export default function UserAuthModal() {
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      const isDakore = emailInput.toLowerCase() === 'ekpendudakore@gmail.com';
-      if (isDakore) {
-        const res = signIn(emailInput, createForm.password, 'admin');
-        setIsSubmitting(false);
-        if (res?.success === false) {
-          setStatusMessage({ type: 'error', text: res.error || 'Authentication error.' });
-          return;
-        }
-        setStatusMessage({ type: 'success', text: 'Welcome Lady Dakore. Routing to Admin Dashboard...' });
-        closeAuthModal();
-        router.push('/admin');
-        return;
-      }
+    const res = await createAccount({
+      fullName: createForm.fullName,
+      email: emailInput,
+      password: createForm.password
+    });
+    setIsSubmitting(false);
 
-      createAccount({
-        fullName: createForm.fullName,
-        email: emailInput,
-        password: createForm.password
+    if (!res.success) {
+      setStatusMessage({ type: 'error', text: res.error || 'Failed to create account.' });
+      return;
+    }
+
+    // Switched to 'verify' mode in AuthContext
+    setOtpCode('');
+    setStatusMessage({ 
+      type: 'success', 
+      text: res.message || `Verification code sent to ${emailInput}. Please enter the 6-digit code.` 
+    });
+  };
+
+  // Handle 6-Digit OTP Verification Submission
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setStatusMessage(null);
+
+    const cleanCode = otpCode.trim();
+    if (!cleanCode || cleanCode.length !== 6) {
+      setStatusMessage({ type: 'error', text: 'Please enter the complete 6-digit verification code.' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    const res = await verifyCode(targetEmail, cleanCode);
+    setIsSubmitting(false);
+
+    if (!res.success) {
+      setStatusMessage({ type: 'error', text: res.error || 'Invalid verification code.' });
+      return;
+    }
+
+    setStatusMessage({ 
+      type: 'success', 
+      text: 'Account successfully verified! Welcome to Public Intel Security Africa.' 
+    });
+
+    setTimeout(() => {
+      closeAuthModal();
+      router.push(res.redirectTo || '/dashboard');
+    }, 600);
+  };
+
+  // Handle Resend Verification Code
+  const handleResendCode = async () => {
+    if (!targetEmail) return;
+    setStatusMessage(null);
+    setIsResending(true);
+
+    const res = await resendVerificationCode(targetEmail);
+    setIsResending(false);
+
+    if (!res.success) {
+      setStatusMessage({ type: 'error', text: res.error || 'Failed to resend code.' });
+    } else {
+      setStatusMessage({ 
+        type: 'success', 
+        text: res.message || `A fresh 6-digit code has been sent to ${targetEmail}.` 
       });
-      setIsSubmitting(false);
-      setStatusMessage({ type: 'success', text: 'Account created successfully. Welcome to Public Intel.' });
-      setTimeout(() => {
-        closeAuthModal();
-      }, 500);
-    }, 300);
+    }
   };
 
   // Handle Sign In Submission
-  const handleSignIn = (e) => {
+  const handleSignIn = async (e) => {
     e.preventDefault();
     setStatusMessage(null);
 
@@ -125,26 +179,34 @@ export default function UserAuthModal() {
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      const res = signIn(emailInput, signInForm.password);
-      setIsSubmitting(false);
+    const res = await signIn(emailInput, signInForm.password);
+    setIsSubmitting(false);
 
-      if (res?.success === false) {
-        setStatusMessage({ type: 'error', text: res.error || 'Invalid email or password.' });
+    if (!res.success) {
+      if (res.requiresVerification) {
+        setStatusMessage({ 
+          type: 'error', 
+          text: res.error || 'Please verify your email address to access your account.' 
+        });
         return;
       }
+      setStatusMessage({ type: 'error', text: res.error || 'Invalid email or password.' });
+      return;
+    }
 
-      if (res?.isAdmin || res?.user?.role === 'admin' || emailInput.toLowerCase() === 'ekpendudakore@gmail.com') {
-        setStatusMessage({ type: 'success', text: 'Administrator credentials verified. Access granted.' });
+    if (res.isAdmin) {
+      setStatusMessage({ type: 'success', text: 'Administrator credentials verified. Access granted.' });
+      setTimeout(() => {
         closeAuthModal();
         router.push('/admin');
-      } else {
-        setStatusMessage({ type: 'success', text: 'Signed in successfully.' });
-        setTimeout(() => {
-          closeAuthModal();
-        }, 400);
-      }
-    }, 250);
+      }, 400);
+    } else {
+      setStatusMessage({ type: 'success', text: 'Signed in successfully. Security notification dispatched.' });
+      setTimeout(() => {
+        closeAuthModal();
+        router.push('/dashboard');
+      }, 400);
+    }
   };
 
   // Handle Sign Out
@@ -168,11 +230,17 @@ export default function UserAuthModal() {
         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-amber-600/10 text-amber-700 dark:text-amber-400 flex items-center justify-center font-bold text-xs">
-              {isLoggedIn ? (user?.avatarInitial || 'U') : <User className="w-4 h-4" />}
+              {isLoggedIn ? (user?.avatarInitial || 'U') : authModalMode === 'verify' ? <KeyRound className="w-4 h-4" /> : <User className="w-4 h-4" />}
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                {isLoggedIn && authModalMode === 'signout' ? 'Account Session' : authModalMode === 'create' ? 'Create Account' : 'Sign In'}
+                {isLoggedIn && authModalMode === 'signout' 
+                  ? 'Account Session' 
+                  : authModalMode === 'verify' 
+                  ? 'Verify Reader Account'
+                  : authModalMode === 'create' 
+                  ? 'Create Account' 
+                  : 'Sign In'}
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Public Intel Security Africa
@@ -189,8 +257,8 @@ export default function UserAuthModal() {
           </button>
         </div>
 
-        {/* Tab Switcher (Only when logged out) */}
-        {!isLoggedIn && (
+        {/* Tab Switcher (Only when logged out and not in verify mode) */}
+        {!isLoggedIn && authModalMode !== 'verify' && (
           <div className="px-5 pt-3 pb-1 border-b border-slate-100 dark:border-slate-800 flex gap-4 shrink-0 bg-slate-50/30 dark:bg-slate-900/30">
             <button
               onClick={() => { setAuthModalMode('signin'); setStatusMessage(null); }}
@@ -220,13 +288,13 @@ export default function UserAuthModal() {
 
         {/* Status Message Notification */}
         {statusMessage && (
-          <div className={`mx-5 mt-4 p-3 rounded-xl text-xs font-medium flex items-center gap-2 ${
+          <div className={`mx-5 mt-4 p-3 rounded-xl text-xs font-medium flex items-start gap-2.5 ${
             statusMessage.type === 'error'
               ? 'bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/60'
               : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/60'
           }`}>
-            <ShieldCheck className="w-4 h-4 shrink-0" />
-            <span>{statusMessage.text}</span>
+            <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5" />
+            <span className="leading-snug">{statusMessage.text}</span>
           </div>
         )}
 
@@ -238,7 +306,6 @@ export default function UserAuthModal() {
           {/* ========================================================= */}
           {isLoggedIn && authModalMode === 'signout' && (
             <div className="space-y-4">
-              
               <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-11 h-11 rounded-full bg-amber-600 text-white flex items-center justify-center font-bold text-base shadow-xs shrink-0">
@@ -252,7 +319,7 @@ export default function UserAuthModal() {
                       {user?.email}
                     </p>
                     <span className="inline-block mt-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                      {user?.role === 'admin' ? 'Administrator' : 'Reader'}
+                      {user?.role === 'admin' ? 'Administrator' : 'Verified Reader'}
                     </span>
                   </div>
                 </div>
@@ -277,7 +344,7 @@ export default function UserAuthModal() {
                 )}
               </div>
 
-              {/* Reader Quick Links (non-admin) */}
+              {/* Reader Quick Links */}
               {user?.role !== 'admin' && (
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <Link
@@ -312,12 +379,90 @@ export default function UserAuthModal() {
                   <span>{isSubmitting ? 'Signing Out...' : 'Sign Out'}</span>
                 </button>
               </div>
-
             </div>
           )}
 
           {/* ========================================================= */}
-          {/* VIEW 2: CLEAN SIGN IN FORM                                */}
+          {/* VIEW 2: VERIFY 6-DIGIT OTP CODE VIEW                      */}
+          {/* ========================================================= */}
+          {!isLoggedIn && authModalMode === 'verify' && (
+            <form onSubmit={handleVerifyOtp} className="space-y-4">
+              <div className="text-center space-y-2 py-1">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto border border-amber-500/20">
+                  <Mail className="w-6 h-6" />
+                </div>
+                <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                  Check Your Email
+                </h4>
+                <p className="text-xs text-slate-600 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
+                  We sent a 6-digit verification code to:
+                  <span className="block font-mono font-bold text-amber-700 dark:text-amber-400 mt-1 truncate">
+                    {targetEmail}
+                  </span>
+                </p>
+              </div>
+
+              {/* 6-Digit OTP Box */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 block text-center">
+                  Enter 6-Digit Security Code
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    required
+                    placeholder="••••••"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                    className="w-full text-center tracking-[0.5em] sm:tracking-[0.8em] font-mono font-black text-2xl py-3 rounded-xl border-2 border-amber-500/40 bg-amber-50/20 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:border-amber-600 focus:ring-2 focus:ring-amber-500/30"
+                  />
+                </div>
+                <p className="text-[11px] text-center text-slate-400">
+                  Code expires in 15 minutes. Delivered by Resend.
+                </p>
+              </div>
+
+              {/* Submit Button */}
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={isSubmitting || otpCode.length !== 6}
+                  className="w-full py-2.5 rounded-xl bg-amber-700 hover:bg-amber-800 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>{isSubmitting ? 'Verifying Code...' : 'Verify & Activate Account'}</span>
+                </button>
+              </div>
+
+              {/* Resend & Back controls */}
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
+                <button
+                  type="button"
+                  onClick={() => { setAuthModalMode('signin'); setStatusMessage(null); }}
+                  className="flex items-center gap-1 text-slate-600 dark:text-slate-400 hover:text-amber-700 dark:hover:text-amber-400"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to Sign In</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResendCode}
+                  disabled={isResending}
+                  className="font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-1"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isResending ? 'animate-spin' : ''}`} />
+                  <span>{isResending ? 'Resending...' : 'Resend Code'}</span>
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* ========================================================= */}
+          {/* VIEW 3: SIGN IN FORM                                      */}
           {/* ========================================================= */}
           {!isLoggedIn && authModalMode === 'signin' && (
             <form onSubmit={handleSignIn} className="space-y-3.5">
@@ -390,7 +535,7 @@ export default function UserAuthModal() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-2.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2"
+                  className="w-full py-2.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   <LogIn className="w-4 h-4" />
                   <span>{isSubmitting ? 'Signing In...' : 'Sign In'}</span>
@@ -415,7 +560,7 @@ export default function UserAuthModal() {
           )}
 
           {/* ========================================================= */}
-          {/* VIEW 3: CLEAN CREATE ACCOUNT FORM                         */}
+          {/* VIEW 4: CREATE ACCOUNT FORM                               */}
           {/* ========================================================= */}
           {!isLoggedIn && authModalMode === 'create' && (
             <form onSubmit={handleCreateAccount} className="space-y-3.5">
@@ -503,10 +648,10 @@ export default function UserAuthModal() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-2.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2"
+                  className="w-full py-2.5 rounded-xl bg-amber-700 hover:bg-amber-800 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <UserPlus className="w-4 h-4" />
-                  <span>{isSubmitting ? 'Creating Account...' : 'Create Account'}</span>
+                  <span>{isSubmitting ? 'Sending Verification Code...' : 'Create Account & Verify'}</span>
                 </button>
               </div>
 

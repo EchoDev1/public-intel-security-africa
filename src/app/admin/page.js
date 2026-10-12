@@ -1323,10 +1323,10 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
             </div>
           )}
 
-          <form onSubmit={(e) => {
+          <form onSubmit={async (e) => {
             e.preventDefault();
             setAdminError(null);
-            const res = loginAsAdmin(adminEmailInput, adminPasswordInput);
+            const res = await loginAsAdmin(adminEmailInput, adminPasswordInput);
             if (res?.success === false) {
               setAdminError(res.error || 'Invalid credentials.');
               return;
