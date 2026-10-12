@@ -1,13 +1,34 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ShieldAlert, AlertTriangle, ChevronRight, Activity, Globe2, Compass } from 'lucide-react';
+import { ShieldAlert, AlertTriangle, ChevronRight, Activity, Globe2, Compass, Radio } from 'lucide-react';
 import { CONTINENTAL_THREAT_INDEX } from '@/lib/data/threatRadar';
 
 export default function ThreatRadarWidget() {
   const [activeTab, setActiveTab] = useState(0);
-  const currentRegion = CONTINENTAL_THREAT_INDEX[activeTab];
+  const [sectors, setSectors] = useState(CONTINENTAL_THREAT_INDEX);
+  const [syncSource, setSyncSource] = useState('UN Peace & Security Early Warning Telemetry');
+  const [lastSyncTime, setLastSyncTime] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadLiveMatrix() {
+      try {
+        const res = await fetch('/api/threat-matrix');
+        const data = await res.json();
+        if (isMounted && data.success && Array.isArray(data.sectors) && data.sectors.length > 0) {
+          setSectors(data.sectors);
+          if (data.lastSyncSource) setSyncSource(data.lastSyncSource);
+          if (data.lastSyncTimestamp) setLastSyncTime(data.lastSyncTimestamp);
+        }
+      } catch (_) {}
+    }
+    loadLiveMatrix();
+    return () => { isMounted = false; };
+  }, []);
+
+  const currentRegion = sectors[activeTab] || sectors[0];
 
   return (
     <section className="py-6 sm:py-10 px-3 sm:px-4 max-w-7xl mx-auto bg-white dark:bg-slate-950 transition-colors">
@@ -16,8 +37,12 @@ export default function ThreatRadarWidget() {
           <div>
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse"></span>
-              <h3 className="text-xs font-black uppercase tracking-widest text-amber-800 dark:text-amber-400">
-                Continental Security Threat Matrix
+              <h3 className="text-xs font-black uppercase tracking-widest text-amber-800 dark:text-amber-400 flex items-center gap-1.5">
+                <span>Continental Security Threat Matrix</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/70 text-red-700 dark:text-red-400 text-[9px] font-mono font-bold">
+                  <Radio className="w-2.5 h-2.5 animate-pulse" />
+                  <span>LIVE RADAR</span>
+                </span>
               </h3>
             </div>
             <h2 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white font-serif mt-1">
@@ -26,8 +51,8 @@ export default function ThreatRadarWidget() {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono hidden sm:inline">
-              Updated Hourly by Senior Intel Analysts
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono hidden sm:inline truncate max-w-xs" title={syncSource}>
+              Verified Source: {syncSource}
             </span>
             <Link
               href="/threat-matrix"
@@ -41,7 +66,7 @@ export default function ThreatRadarWidget() {
 
         {/* Region Selector Pills */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mt-6">
-          {CONTINENTAL_THREAT_INDEX.map((item, idx) => {
+          {sectors.map((item, idx) => {
             const isSelected = activeTab === idx;
             const badgeColor =
               item.threatLevel === 'Critical' ? 'text-red-700 dark:text-red-400 font-bold' :

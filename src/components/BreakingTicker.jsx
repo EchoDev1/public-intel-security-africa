@@ -6,14 +6,29 @@ import { Flame, ArrowRight } from 'lucide-react';
 import { BREAKING_ALERTS } from '@/lib/data/threatRadar';
 
 export default function BreakingTicker() {
+  const [alerts, setAlerts] = useState(BREAKING_ALERTS);
   const [currentAlertIndex, setCurrentAlertIndex] = useState(0);
 
   useEffect(() => {
+    let isMounted = true;
+    fetch('/api/threat-matrix')
+      .then(r => r.json())
+      .then(d => {
+        if (isMounted && d.success && Array.isArray(d.breakingAlerts) && d.breakingAlerts.length > 0) {
+          setAlerts(d.breakingAlerts);
+        }
+      })
+      .catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
+
+  useEffect(() => {
+    if (alerts.length === 0) return;
     const timer = setInterval(() => {
-      setCurrentAlertIndex((prev) => (prev + 1) % BREAKING_ALERTS.length);
+      setCurrentAlertIndex((prev) => (prev + 1) % alerts.length);
     }, 6000);
     return () => clearInterval(timer);
-  }, []);
+  }, [alerts.length]);
 
   return (
     <div className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-xs py-1.5 md:py-2 px-3 sm:px-4 select-none relative overflow-hidden z-20 transition-colors">
@@ -27,27 +42,27 @@ export default function BreakingTicker() {
 
         {/* Mobile View: Sized To Fit cleanly on screen without sliding marquee */}
         <div 
-          onClick={() => setCurrentAlertIndex((prev) => (prev + 1) % BREAKING_ALERTS.length)}
+          onClick={() => setCurrentAlertIndex((prev) => (prev + 1) % alerts.length)}
           className="md:hidden flex-1 min-w-0 cursor-pointer py-0.5"
           title="Tap to cycle next alert"
         >
           <div className="text-[11px] sm:text-xs text-slate-800 dark:text-slate-200 font-medium truncate flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
-            <span className="truncate">{BREAKING_ALERTS[currentAlertIndex]}</span>
+            <span className="truncate">{alerts[currentAlertIndex]}</span>
           </div>
         </div>
 
         {/* Desktop View: Full Continuous Marquee */}
         <div className="hidden md:block overflow-hidden flex-1 relative h-5">
           <div className="animate-marquee whitespace-nowrap flex items-center gap-8 text-slate-800 dark:text-slate-200 font-medium text-xs">
-            {BREAKING_ALERTS.map((alert, index) => (
+            {alerts.map((alert, index) => (
               <span key={index} className="inline-flex items-center gap-2 hover:text-amber-700 dark:hover:text-amber-400 transition-colors cursor-pointer">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-600 inline-block"></span>
                 <span>{alert}</span>
               </span>
             ))}
             {/* Duplicated for smooth loop */}
-            {BREAKING_ALERTS.map((alert, index) => (
+            {alerts.map((alert, index) => (
               <span key={`dup-${index}`} className="inline-flex items-center gap-2 hover:text-amber-700 dark:hover:text-amber-400 transition-colors cursor-pointer">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-600 inline-block"></span>
                 <span>{alert}</span>

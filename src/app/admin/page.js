@@ -161,6 +161,12 @@ export default function AdminDashboardPage() {
   const [isDummyPurged, setIsDummyPurged] = useState(false);
   const [realArticlesCount, setRealArticlesCount] = useState(0);
 
+  // Threat Matrix Live Sync State
+  const [isAutoSyncEnabled, setIsAutoSyncEnabled] = useState(true);
+  const [threatMatrixSource, setThreatMatrixSource] = useState('UN Peace & Security Operations Telemetry');
+  const [threatMatrixLastSync, setThreatMatrixLastSync] = useState(null);
+  const [isSyncingThreatMatrix, setIsSyncingThreatMatrix] = useState(false);
+
   const fetchLiveArticles = async () => {
     try {
       const res = await fetch('/api/articles');
@@ -173,8 +179,74 @@ export default function AdminDashboardPage() {
     } catch (_) {}
   };
 
+  const fetchThreatMatrix = async () => {
+    try {
+      const res = await fetch('/api/threat-matrix');
+      const data = await res.json();
+      if (data?.success && Array.isArray(data.sectors)) {
+        setThreatRadarList(data.sectors);
+        if (data.continentalThreatLevel) setContinentalThreatLevel(data.continentalThreatLevel);
+        if (typeof data.isAutoSyncEnabled === 'boolean') setIsAutoSyncEnabled(data.isAutoSyncEnabled);
+        if (data.lastSyncSource) setThreatMatrixSource(data.lastSyncSource);
+        if (data.lastSyncTimestamp) setThreatMatrixLastSync(data.lastSyncTimestamp);
+      }
+    } catch (_) {}
+  };
+
+  const handleSyncThreatMatrixNow = async () => {
+    setIsSyncingThreatMatrix(true);
+    try {
+      const res = await fetch('/api/threat-matrix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sync_now' })
+      });
+      const data = await res.json();
+      if (data?.success && data.data) {
+        setThreatRadarList(data.data.sectors || []);
+        if (data.data.continentalThreatLevel) setContinentalThreatLevel(data.data.continentalThreatLevel);
+        if (data.data.lastSyncSource) setThreatMatrixSource(data.data.lastSyncSource);
+        if (data.data.lastSyncTimestamp) setThreatMatrixLastSync(data.data.lastSyncTimestamp);
+        showToast("Threat Matrix synchronized live from UN Peace & Security feeds!");
+      }
+    } catch (_) {
+      showToast("Error synchronizing Threat Matrix.");
+    } finally {
+      setIsSyncingThreatMatrix(false);
+    }
+  };
+
+  const handleToggleAutoSync = async () => {
+    const nextVal = !isAutoSyncEnabled;
+    setIsAutoSyncEnabled(nextVal);
+    try {
+      await fetch('/api/threat-matrix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle_auto_sync', isAutoSyncEnabled: nextVal })
+      });
+      showToast(`Automated live feed synchronization ${nextVal ? 'ENABLED' : 'PAUSED'}.`);
+    } catch (_) {}
+  };
+
+  const handleSaveFullThreatMatrix = async (updatedSectors, updatedLevel) => {
+    try {
+      await fetch('/api/threat-matrix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save_all',
+          sectors: updatedSectors || threatRadarList,
+          continentalThreatLevel: updatedLevel || continentalThreatLevel,
+          isAutoSyncEnabled
+        })
+      });
+    } catch (_) {}
+  };
+
   useEffect(() => {
     fetchLiveArticles();
+    fetchThreatMatrix();
   }, []);
 
   const handlePurgeAllDummy = async () => {
@@ -3999,6 +4071,52 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
               </div>
             </div>
 
+            {/* Real-Time Reliable Source Sync & Radar Control Bar */}
+            <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-amber-950 border border-amber-600/30 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
+                  <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-300">
+                    Automated Reliable Source Telemetry
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                    isAutoSyncEnabled ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-slate-700 text-slate-300'
+                  }`}>
+                    {isAutoSyncEnabled ? 'ACTIVE / AUTO-SYNC' : 'PAUSED (MANUAL ONLY)'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 max-w-xl leading-relaxed">
+                  Automatically calibrates conflict volatility, sector risk scores, and trend assessments from verified <strong>UN Peace &amp; Security Operations</strong>, coastal radar grids, and international peace missions.
+                </p>
+                <div className="text-[11px] text-slate-400 font-mono pt-1">
+                  Verified Feed: <span className="text-amber-200">{threatMatrixSource}</span>
+                  {threatMatrixLastSync && ` • Last Synced: ${new Date(threatMatrixLastSync).toLocaleTimeString()}`}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+                <button
+                  onClick={handleToggleAutoSync}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold font-mono uppercase tracking-wider border transition-colors ${
+                    isAutoSyncEnabled
+                      ? 'bg-emerald-950/80 hover:bg-emerald-900 text-emerald-200 border-emerald-700'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-600'
+                  }`}
+                >
+                  {isAutoSyncEnabled ? '✓ Auto-Sync ON' : '✕ Auto-Sync PAUSED'}
+                </button>
+
+                <button
+                  onClick={handleSyncThreatMatrixNow}
+                  disabled={isSyncingThreatMatrix}
+                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncingThreatMatrix ? 'animate-spin' : ''}`} />
+                  <span>{isSyncingThreatMatrix ? 'Syncing Feeds...' : 'Sync Now with UN Feeds'}</span>
+                </button>
+              </div>
+            </div>
+
             {/* Quick Threat Level Override Selector */}
             <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-3">
               <div className="flex items-center justify-between">
@@ -4022,6 +4140,7 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                       key={item.level}
                       onClick={() => {
                         setContinentalThreatLevel(item.level);
+                        handleSaveFullThreatMatrix(threatRadarList, item.level);
                         showToast(`Continental Threat Level set to: ${item.level.toUpperCase()}`);
                       }}
                       className={`p-3 rounded-xl text-center font-bold text-xs uppercase tracking-wider transition-all border ${
@@ -4049,7 +4168,24 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                       }`}>
                         {sec.threatLevel} ({sec.threatScore} / 10)
                       </span>
-                      <span className="text-[11px] font-mono text-slate-400 font-semibold">{sec.trend}</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => {
+                            const nextLock = !sec.manualLock;
+                            const updated = threatRadarList.map((t, i) => i === idx ? { ...t, manualLock: nextLock } : t);
+                            setThreatRadarList(updated);
+                            handleSaveFullThreatMatrix(updated);
+                            showToast(nextLock ? `Sector "${sec.region}" locked from automated sync.` : `Sector "${sec.region}" unlocked for live auto-sync.`);
+                          }}
+                          className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold transition-colors ${
+                            sec.manualLock ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                          }`}
+                          title={sec.manualLock ? "Manual lock active. Click to allow automated updates." : "Auto-sync active. Click to lock with manual score."}
+                        >
+                          {sec.manualLock ? '🔒 LOCKED' : '⚡ AUTO-SYNC'}
+                        </button>
+                        <span className="text-[11px] font-mono text-slate-400 font-semibold">{sec.trend}</span>
+                      </div>
                     </div>
 
                     <h3 className="text-base font-bold text-slate-900 dark:text-white font-serif">
@@ -4084,7 +4220,10 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                       </button>
                       <button
                         onClick={() => {
-                          setThreatRadarList(threatRadarList.filter((_, i) => i !== idx));
+                          if (!window.confirm(`Delete threat sector "${sec.region}" from the Continental Matrix?`)) return;
+                          const updated = threatRadarList.filter((_, i) => i !== idx);
+                          setThreatRadarList(updated);
+                          handleSaveFullThreatMatrix(updated);
                           showToast(`Threat sector "${sec.region}" removed.`);
                         }}
                         className="text-red-500 hover:text-red-700 flex items-center gap-1"
@@ -6847,19 +6986,25 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
               onSubmit={(e) => {
                 e.preventDefault();
                 if (editingThreat) {
-                  setThreatRadarList(threatRadarList.map((t, i) => i === editingThreat.idx ? {
+                  const updated = threatRadarList.map((t, i) => i === editingThreat.idx ? {
                     ...editingThreat,
-                    lastUpdated: 'Updated just now'
-                  } : t));
-                  showToast(`Threat sector "${editingThreat.region}" updated.`);
+                    manualLock: true,
+                    lastUpdated: 'Updated just now (Manual Override)'
+                  } : t);
+                  setThreatRadarList(updated);
+                  handleSaveFullThreatMatrix(updated);
+                  showToast(`Threat sector "${editingThreat.region}" updated and saved live.`);
                   setEditingThreat(null);
                 } else {
                   const newT = {
                     ...newThreatItem,
-                    lastUpdated: 'Updated just now'
+                    manualLock: true,
+                    lastUpdated: 'Updated just now (Manual Override)'
                   };
-                  setThreatRadarList([...threatRadarList, newT]);
-                  showToast(`Threat sector "${newT.region}" added to Continental Matrix.`);
+                  const updated = [...threatRadarList, newT];
+                  setThreatRadarList(updated);
+                  handleSaveFullThreatMatrix(updated);
+                  showToast(`Threat sector "${newT.region}" added & saved to Continental Matrix.`);
                   setNewThreatModal(false);
                 }
               }}
