@@ -1,45 +1,62 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useSyncExternalStore } from 'react';
 
 const AuthContext = createContext();
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    if (typeof window === 'undefined') return null;
-    try {
-      const storedAuth = localStorage.getItem('pi-auth-state');
-      if (storedAuth) {
-        const parsed = JSON.parse(storedAuth);
-        if (parsed?.user?.email !== 'iamharriswalter@gmail.com' && parsed?.isLoggedIn && parsed?.user) {
-          return parsed.user;
-        }
-      }
-    } catch (_) {}
-    return null;
-  });
+// External store event subscription for local storage
+function subscribeAuthStore(callback) {
+  if (typeof window === 'undefined') return () => {};
+  window.addEventListener('storage', callback);
+  window.addEventListener('pi-auth-update', callback);
+  return () => {
+    window.removeEventListener('storage', callback);
+    window.removeEventListener('pi-auth-update', callback);
+  };
+}
 
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    try {
-      const storedAuth = localStorage.getItem('pi-auth-state');
-      if (storedAuth) {
-        const parsed = JSON.parse(storedAuth);
+let lastRawAuth = null;
+let cachedAuthSnapshot = { isLoggedIn: false, user: null };
+
+function getClientAuthSnapshot() {
+  if (typeof window === 'undefined') return { isLoggedIn: false, user: null };
+  try {
+    const raw = localStorage.getItem('pi-auth-state');
+    if (raw !== lastRawAuth) {
+      lastRawAuth = raw;
+      if (raw) {
+        const parsed = JSON.parse(raw);
         if (parsed?.user?.email !== 'iamharriswalter@gmail.com' && parsed?.isLoggedIn && parsed?.user) {
-          return true;
+          cachedAuthSnapshot = { isLoggedIn: true, user: parsed.user };
+        } else {
+          cachedAuthSnapshot = { isLoggedIn: false, user: null };
         }
+      } else {
+        cachedAuthSnapshot = { isLoggedIn: false, user: null };
       }
-    } catch (_) {}
-    return false;
-  });
+    }
+  } catch (_) {
+    cachedAuthSnapshot = { isLoggedIn: false, user: null };
+  }
+  return cachedAuthSnapshot;
+}
+
+const SERVER_AUTH_SNAPSHOT = { isLoggedIn: false, user: null };
+function getServerAuthSnapshot() {
+  return SERVER_AUTH_SNAPSHOT;
+}
+
+export function AuthProvider({ children }) {
+  // useSyncExternalStore guarantees SSR and client hydration output match exactly
+  const authState = useSyncExternalStore(subscribeAuthStore, getClientAuthSnapshot, getServerAuthSnapshot);
+  const user = authState.user;
+  const isLoggedIn = authState.isLoggedIn;
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState('signin'); // 'signin' | 'create' | 'verify' | 'signout'
   const [pendingEmail, setPendingEmail] = useState('');
 
   const saveState = (loggedIn, userData) => {
-    setIsLoggedIn(loggedIn);
-    setUser(userData);
     try {
       if (loggedIn && userData) {
         localStorage.setItem('pi-auth-state', JSON.stringify({
@@ -48,6 +65,9 @@ export function AuthProvider({ children }) {
         }));
       } else {
         localStorage.removeItem('pi-auth-state');
+      }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('pi-auth-update'));
       }
     } catch (_) {}
   };

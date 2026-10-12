@@ -1,5 +1,4 @@
 import './globals.css';
-import Script from 'next/script';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { RadioProvider } from '@/context/RadioContext';
 import { AuthProvider } from '@/context/AuthContext';
@@ -27,9 +26,8 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <Script
+        <script
           id="theme-init"
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               try {
