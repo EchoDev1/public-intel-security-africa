@@ -14,7 +14,6 @@ import {
   ChevronRight,
   Eye, 
   Sparkles, 
-  UserCheck, 
   ShieldCheck,
   User,
   Headphones, 
@@ -101,29 +100,25 @@ export default function Navbar() {
             </button>
             <span className="text-slate-600">|</span>
             {(isLoggedIn && (user?.role === 'admin' || user?.email?.toLowerCase() === 'ekpendudakore@gmail.com')) ? (
-              <Link 
-                href="/admin" 
-                className="hover:text-amber-300 text-amber-400 font-bold transition-colors flex items-center gap-1.5 font-sans text-[10.5px] sm:text-xs tracking-wider"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-                <span>ADMIN DASHBOARD (LADY DAKORE)</span>
-              </Link>
-            ) : (
               <>
-                <Link href="/admin" className="hover:text-amber-400 transition-colors flex items-center gap-1 font-sans text-[10.5px] sm:text-xs">
-                  <UserCheck className="w-3.5 h-3.5 text-amber-500" />
-                  <span>CMS</span>
+                <Link 
+                  href="/admin" 
+                  className="hover:text-amber-300 text-amber-400 font-bold transition-colors flex items-center gap-1.5 font-sans text-[10.5px] sm:text-xs tracking-wider"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                  <span>ADMIN DASHBOARD</span>
                 </Link>
                 <span className="text-slate-600">|</span>
-                <button 
-                  onClick={() => openAuthModal(isLoggedIn ? 'signout' : 'signin')}
-                  className="hover:text-amber-400 transition-colors flex items-center gap-1 font-sans text-[10.5px] sm:text-xs"
-                >
-                  <User className="w-3.5 h-3.5 text-amber-500" />
-                  <span>{isLoggedIn ? 'MY ACCOUNT' : 'SIGN IN'}</span>
-                </button>
               </>
-            )}
+            ) : null}
+
+            <button 
+              onClick={() => openAuthModal(isLoggedIn ? 'signout' : 'signin')}
+              className="hover:text-amber-400 transition-colors flex items-center gap-1 font-sans text-[10.5px] sm:text-xs"
+            >
+              <User className="w-3.5 h-3.5 text-amber-500" />
+              <span>{isLoggedIn ? 'MY ACCOUNT' : 'SIGN IN'}</span>
+            </button>
           </div>
         </div>
       </div>

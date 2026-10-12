@@ -150,7 +150,7 @@ export default function Footer() {
             <span>•</span>
             <Link href="/contacts" className="hover:text-amber-400">Bureau Directory</Link>
             <span>•</span>
-            <Link href="/admin" className="hover:text-amber-400">Newsroom CMS</Link>
+            <Link href="/coverage" className="hover:text-amber-400">Intelligence Wire</Link>
           </div>
         </div>
 

@@ -39,20 +39,20 @@ export default function DashboardPage() {
 
   // User Profile State initialized with auth context
   const [profile, setProfile] = useState({
-    displayName: user?.displayName || 'harris',
-    email: user?.email || 'iamharriswalter@gmail.com',
+    displayName: user?.displayName || 'Reader Member',
+    email: user?.email || '',
     role: user?.role || 'reader',
-    joinedDate: user?.joinedDate || 'September 27, 2026',
+    joinedDate: user?.joinedDate || 'Recently Joined',
     bio: user?.bio || 'No bio added yet.',
   });
 
   useEffect(() => {
     if (user) {
       setProfile({
-        displayName: user.displayName || 'harris',
-        email: user.email || 'iamharriswalter@gmail.com',
+        displayName: user.displayName || 'Reader Member',
+        email: user.email || '',
         role: user.role || 'reader',
-        joinedDate: user.joinedDate || 'September 27, 2026',
+        joinedDate: user.joinedDate || 'Recently Joined',
         bio: user.bio || 'No bio added yet.',
       });
     }
@@ -103,6 +103,28 @@ export default function DashboardPage() {
     e.preventDefault();
     setIsEditing(false);
   };
+
+  if (!isLoggedIn || !user) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center py-16 px-4 bg-slate-50/50 dark:bg-slate-950">
+        <div className="max-w-md w-full text-center space-y-4 p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md">
+          <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center mx-auto">
+            <User className="w-6 h-6" />
+          </div>
+          <h2 className="text-xl font-bold font-serif text-slate-900 dark:text-white">Sign In to View Account</h2>
+          <p className="text-xs text-slate-600 dark:text-slate-400">
+            Please sign in to access your reader profile, saved articles, and notifications.
+          </p>
+          <button
+            onClick={() => openAuthModal('signin')}
+            className="w-full py-2.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-sm"
+          >
+            Sign In Now
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 py-8 sm:py-12 px-3 sm:px-4 md:px-6 transition-colors">

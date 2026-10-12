@@ -84,8 +84,8 @@ export default function AdminDashboardPage() {
   const { user, isLoggedIn, loginAsAdmin, signOut } = useAuth();
   
   // Registered Admin Credentials for Lady Dakore
-  const [adminEmailInput, setAdminEmailInput] = useState('Ekpendudakore@gmail.com');
-  const [adminPasswordInput, setAdminPasswordInput] = useState('ladydakore@artellium90');
+  const [adminEmailInput, setAdminEmailInput] = useState('');
+  const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [adminError, setAdminError] = useState(null);
 
   // Active Navigation Tab
@@ -1340,6 +1340,7 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                 <input
                   type="email"
                   required
+                  placeholder="name@example.com"
                   value={adminEmailInput}
                   onChange={(e) => setAdminEmailInput(e.target.value)}
                   className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs font-mono focus:outline-none focus:border-amber-500"
@@ -1356,6 +1357,7 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                 <input
                   type="password"
                   required
+                  placeholder="Enter admin password"
                   value={adminPasswordInput}
                   onChange={(e) => setAdminPasswordInput(e.target.value)}
                   className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-amber-500"
