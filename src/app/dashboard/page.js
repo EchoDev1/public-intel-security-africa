@@ -39,7 +39,7 @@ export default function DashboardPage() {
 
   // User Profile State initialized with auth context
   const [profile, setProfile] = useState({
-    displayName: user?.displayName || 'Reader Member',
+    displayName: user?.displayName || user?.fullName || 'Reader Member',
     email: user?.email || '',
     role: user?.role || 'reader',
     joinedDate: user?.joinedDate || 'Recently Joined',
@@ -47,61 +47,112 @@ export default function DashboardPage() {
   });
 
   useEffect(() => {
-    if (user) {
+    if (user?.email) {
+      let bio = user.bio || 'No bio added yet.';
+      let displayName = user.displayName || user.fullName || 'Reader Member';
+      try {
+        const storedProfile = localStorage.getItem(`pi_profile_${user.email.toLowerCase()}`);
+        if (storedProfile) {
+          const parsed = JSON.parse(storedProfile);
+          bio = parsed.bio || bio;
+          displayName = parsed.displayName || displayName;
+        }
+      } catch (_) {}
+
       setProfile({
-        displayName: user.displayName || 'Reader Member',
-        email: user.email || '',
+        displayName,
+        email: user.email,
         role: user.role || 'reader',
         joinedDate: user.joinedDate || 'Recently Joined',
-        bio: user.bio || 'No bio added yet.',
+        bio,
       });
     }
   }, [user]);
 
-  // Saved Articles for Reader Harris
-  const [savedArticles, setSavedArticles] = useState([
-    ARTICLES[0], // Gulf of Guinea Maritime
-    ARTICLES[1], // Autonomous Drone Surveillance
-    ARTICLES[3], // Financial Cyber Shield
-  ]);
+  // Clean, per-user Saved Articles (starts empty with no dummy articles)
+  const [savedArticles, setSavedArticles] = useState([]);
 
-  // Notifications
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: 'Priority Maritime Intelligence Alert',
-      message: 'Nigerian Navy deployed new autonomous acoustic sensor grid in the Gulf of Guinea.',
-      time: '35 mins ago',
-      read: false
-    },
-    {
-      id: 2,
-      title: 'Breaking Cyber Bulletin',
-      message: 'Pan-African CERTs successfully neutralized targeted banking ransomware across payment switches.',
-      time: '2 hours ago',
-      read: false
-    },
-    {
-      id: 3,
-      title: 'Weekly Intelligence Digest Available',
-      message: 'The Q3 West & Central Africa Strategic Security Assessment is now accessible in your reader portal.',
-      time: 'Yesterday',
-      read: true
-    }
-  ]);
+  useEffect(() => {
+    if (!user?.email) return;
+    const loadSaved = () => {
+      try {
+        const userKey = `pi_saved_articles_${user.email.toLowerCase()}`;
+        const stored = localStorage.getItem(userKey);
+        if (stored) {
+          setSavedArticles(JSON.parse(stored));
+        } else {
+          setSavedArticles([]);
+        }
+      } catch (_) {
+        setSavedArticles([]);
+      }
+    };
+
+    loadSaved();
+    window.addEventListener('pi_saved_articles_updated', loadSaved);
+    return () => window.removeEventListener('pi_saved_articles_updated', loadSaved);
+  }, [user?.email]);
+
+  // Clean, per-user Notifications
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    if (!user?.email) return;
+    try {
+      const notifKey = `pi_notifications_${user.email.toLowerCase()}`;
+      const stored = localStorage.getItem(notifKey);
+      if (stored) {
+        setNotifications(JSON.parse(stored));
+      } else {
+        const initial = [
+          {
+            id: 'notif-welcome',
+            title: 'Reader Account Verified',
+            message: `Welcome to Public Intel Security Africa, ${user.displayName || user.fullName || 'Reader'}. Your verified access to 25 continental defense verticals is now active.`,
+            time: 'Active',
+            read: false
+          }
+        ];
+        setNotifications(initial);
+        localStorage.setItem(notifKey, JSON.stringify(initial));
+      }
+    } catch (_) {}
+  }, [user?.email, user?.displayName, user?.fullName]);
 
   const removeSaved = (id, e) => {
     e.stopPropagation();
-    setSavedArticles(prev => prev.filter(item => item.id !== id));
+    setSavedArticles(prev => {
+      const next = prev.filter(item => item.id !== id && item.slug !== id);
+      if (user?.email) {
+        try {
+          localStorage.setItem(`pi_saved_articles_${user.email.toLowerCase()}`, JSON.stringify(next));
+          window.dispatchEvent(new Event('pi_saved_articles_updated'));
+        } catch (_) {}
+      }
+      return next;
+    });
   };
 
   const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setNotifications(prev => {
+      const updated = prev.map(n => ({ ...n, read: true }));
+      if (user?.email) {
+        try {
+          localStorage.setItem(`pi_notifications_${user.email.toLowerCase()}`, JSON.stringify(updated));
+        } catch (_) {}
+      }
+      return updated;
+    });
   };
 
   const handleSaveDetails = (e) => {
     e.preventDefault();
     setIsEditing(false);
+    if (user?.email) {
+      try {
+        localStorage.setItem(`pi_profile_${user.email.toLowerCase()}`, JSON.stringify(profile));
+      } catch (_) {}
+    }
   };
 
   if (!isLoggedIn || !user) {
@@ -223,9 +274,9 @@ export default function DashboardPage() {
                 
                 {/* Welcome Card with Avatar "h" */}
                 <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-xs flex items-center gap-4 sm:gap-6 transition-colors">
-                  {/* Circle Avatar with letter 'h' */}
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-amber-500 to-amber-700 text-white flex items-center justify-center font-bold text-3xl sm:text-4xl shadow-md border-2 border-white dark:border-slate-800 shrink-0">
-                    h
+                  {/* Dynamic Reader Initial Avatar */}
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-amber-500 to-amber-700 text-white flex items-center justify-center font-bold text-3xl sm:text-4xl shadow-md border-2 border-white dark:border-slate-800 shrink-0 uppercase">
+                    {profile.displayName?.charAt(0) || user?.avatarInitial || 'U'}
                   </div>
 
                   <div className="space-y-1 min-w-0">
@@ -373,14 +424,22 @@ export default function DashboardPage() {
                 </div>
 
                 {savedArticles.length === 0 ? (
-                  <div className="text-center py-12 space-y-3">
-                    <Bookmark className="w-8 h-8 text-slate-400 mx-auto" />
-                    <p className="text-sm text-slate-500">Your reading list is empty.</p>
+                  <div className="text-center py-16 px-4 space-y-4 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto border border-amber-500/20">
+                      <Bookmark className="w-6 h-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-base font-bold text-slate-900 dark:text-white">Your Reading List is Pristine</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                        No dummy stories here. As you explore strategic dossiers across our 25 verticals, click the bookmark icon on any story to save it to your personal queue.
+                      </p>
+                    </div>
                     <Link
                       href="/special-reports"
-                      className="inline-block px-4 py-2 rounded-lg bg-amber-700 text-white text-xs font-bold uppercase"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold uppercase tracking-wider transition-colors shadow-xs"
                     >
-                      Browse Intelligence Reports
+                      <span>Explore Live Intelligence</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>
                 ) : (

@@ -16,8 +16,8 @@ import {
   Radio, 
   Play, 
   Pause 
-} from 'lucide-react';
 import { ARTICLES } from '@/lib/data/articles';
+import { useAuth } from '@/context/AuthContext';
 
 // Consolidated pool of top & trending stories from all features across the platform
 // Each with verified authentic photojournalistic news imagery
@@ -130,9 +130,36 @@ const ROTATIONAL_TOP_STORIES = [
 ];
 
 export default function TopIntelStory() {
+  const { user, isLoggedIn, openAuthModal } = useAuth();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [savedIds, setSavedIds] = useState([]);
+
+  // Sync saved bookmarks with per-user localStorage
+  useEffect(() => {
+    if (!user?.email) {
+      setSavedIds([]);
+      return;
+    }
+    const updateSaved = () => {
+      try {
+        const userKey = `pi_saved_articles_${user.email.toLowerCase()}`;
+        const stored = localStorage.getItem(userKey);
+        if (stored) {
+          const list = JSON.parse(stored);
+          setSavedIds(list.map((item) => item.id || item.slug));
+        } else {
+          setSavedIds([]);
+        }
+      } catch (_) {
+        setSavedIds([]);
+      }
+    };
+
+    updateSaved();
+    window.addEventListener('pi_saved_articles_updated', updateSaved);
+    return () => window.removeEventListener('pi_saved_articles_updated', updateSaved);
+  }, [user?.email]);
 
   // Auto-rotate: the newest top stories rotate in, older ones cycle back
   useEffect(() => {
@@ -153,12 +180,45 @@ export default function TopIntelStory() {
     setCurrentIndex((prev) => (prev - 1 + ROTATIONAL_TOP_STORIES.length) % ROTATIONAL_TOP_STORIES.length);
   };
 
-  const toggleSave = (id, e) => {
+  const toggleSave = (story, e) => {
     e.preventDefault();
     e.stopPropagation();
-    setSavedIds((prev) => 
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+
+    if (!isLoggedIn || !user?.email) {
+      openAuthModal('signin');
+      return;
+    }
+
+    const userKey = `pi_saved_articles_${user.email.toLowerCase()}`;
+    try {
+      const stored = localStorage.getItem(userKey);
+      let currentList = stored ? JSON.parse(stored) : [];
+      const storyId = story.id || story.slug;
+      const alreadySaved = currentList.some((item) => (item.id === storyId || item.slug === story.slug));
+
+      let updatedList;
+      if (alreadySaved) {
+        updatedList = currentList.filter((item) => item.id !== storyId && item.slug !== story.slug);
+      } else {
+        const articleToSave = {
+          id: story.id || story.slug,
+          slug: story.slug,
+          title: story.title,
+          categoryName: story.category || story.categorySlug,
+          region: story.country || story.location || 'Continental Africa',
+          excerpt: story.summary || '',
+          coverImage: story.image,
+          readTime: story.readTime || '5 min read',
+          threatLevel: story.threatLevel || 'Elevated',
+          savedAt: new Date().toISOString()
+        };
+        updatedList = [articleToSave, ...currentList];
+      }
+
+      localStorage.setItem(userKey, JSON.stringify(updatedList));
+      setSavedIds(updatedList.map((item) => item.id || item.slug));
+      window.dispatchEvent(new Event('pi_saved_articles_updated'));
+    } catch (_) {}
   };
 
   const activeStory = ROTATIONAL_TOP_STORIES[currentIndex];
@@ -255,12 +315,12 @@ export default function TopIntelStory() {
 
               {/* Bookmark Save Button */}
               <button
-                onClick={(e) => toggleSave(activeStory.id, e)}
+                onClick={(e) => toggleSave(activeStory, e)}
                 className="absolute top-3 right-3 p-2 rounded-full bg-slate-900/80 hover:bg-amber-600 text-white backdrop-blur-md border border-slate-700 transition-colors shadow-sm"
-                title={savedIds.includes(activeStory.id) ? "Saved to Reading List" : "Save Story"}
+                title={savedIds.includes(activeStory.id) || savedIds.includes(activeStory.slug) ? "Saved to Reading List" : "Save Story"}
                 aria-label="Save story"
               >
-                <Bookmark className={`w-3.5 h-3.5 ${savedIds.includes(activeStory.id) ? "fill-amber-400 text-amber-400" : ""}`} />
+                <Bookmark className={`w-3.5 h-3.5 ${savedIds.includes(activeStory.id) || savedIds.includes(activeStory.slug) ? "fill-amber-400 text-amber-400" : ""}`} />
               </button>
 
               {/* Location & Time Overlay */}

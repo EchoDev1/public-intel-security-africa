@@ -158,6 +158,54 @@ export default function AdminDashboardPage() {
   const [articlesList, setArticlesList] = useState(ARTICLES);
   const [articleSearchQuery, setArticleSearchQuery] = useState('');
   const [articleCategoryFilter, setArticleCategoryFilter] = useState('all');
+  const [isDummyPurged, setIsDummyPurged] = useState(false);
+  const [realArticlesCount, setRealArticlesCount] = useState(0);
+
+  const fetchLiveArticles = async () => {
+    try {
+      const res = await fetch('/api/articles');
+      const data = await res.json();
+      if (data?.articles) {
+        setArticlesList(data.articles);
+        setRealArticlesCount(data.realCount || 0);
+        setIsDummyPurged(Boolean(data.isDummyPurged));
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    fetchLiveArticles();
+  }, []);
+
+  const handlePurgeAllDummy = async () => {
+    if (!window.confirm("Are you sure you want to permanently delete all sample/dummy news articles? Only real uploaded articles will remain on the platform.")) {
+      return;
+    }
+    try {
+      const res = await fetch('/api/articles?action=purge_dummy', { method: 'DELETE' });
+      const data = await res.json();
+      if (data?.success) {
+        showToast("All sample/dummy news articles removed permanently!");
+        fetchLiveArticles();
+      }
+    } catch (_) {
+      showToast("Error purging dummy articles.");
+    }
+  };
+
+  const handleDeleteArticle = async (articleId) => {
+    if (!window.confirm("Are you sure you want to delete this article?")) return;
+    try {
+      const res = await fetch(`/api/articles?id=${articleId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data?.success) {
+        showToast("Article deleted successfully.");
+        fetchLiveArticles();
+      }
+    } catch (_) {
+      setArticlesList(prev => prev.filter(a => a.id !== articleId));
+    }
+  };
 
   // Form State: Write New Article / Special Report
   const [newArticle, setNewArticle] = useState({
@@ -1796,16 +1844,35 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                 News Stories & Published Articles ({articlesList.length})
               </h2>
               <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-                Review, filter, edit, or delete all published security coverage across the 25 official verticals. You can also toggle red breaking news alerts or publish new stories.
+                Review, filter, edit, or delete all published security coverage across the 25 official verticals. Real news uploads automatically phase out sample dummy news.
               </p>
-              <div className="pt-2 flex items-center gap-3">
+              
+              {/* Status and Action Buttons */}
+              <div className="pt-2 flex flex-wrap items-center gap-3">
                 <button
                   onClick={() => setActiveTab('publish_article')}
-                  className="px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs uppercase tracking-wider shadow-sm flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs uppercase tracking-wider shadow-sm flex items-center gap-1.5 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   <span>+ Write New Story</span>
                 </button>
+
+                {!isDummyPurged && (
+                  <button
+                    onClick={handlePurgeAllDummy}
+                    className="px-4 py-2 rounded-xl bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-800 font-bold text-xs uppercase tracking-wider shadow-sm flex items-center gap-1.5 transition-colors"
+                    title="Permanently remove all sample seed articles from the platform"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-400" />
+                    <span>Delete All Dummy / Sample News</span>
+                  </button>
+                )}
+
+                <div className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-300 flex items-center gap-2">
+                  <span className="text-emerald-400 font-bold">● Real Uploads: {realArticlesCount}</span>
+                  <span className="text-slate-600">|</span>
+                  <span className="text-amber-400 font-bold">● Sample Seed: {isDummyPurged ? 0 : Math.max(0, articlesList.length - realArticlesCount)}</span>
+                </div>
               </div>
             </div>
 
@@ -1880,6 +1947,15 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                             <span className="px-2 py-0.5 rounded bg-black/70 text-amber-400 font-mono text-[10px] font-bold">
                               {art.categoryName || art.categorySlug || 'Security'}
                             </span>
+                            {art.isRealUpload ? (
+                              <span className="px-2 py-0.5 rounded bg-emerald-600 text-white font-mono text-[9px] font-bold shadow-xs">
+                                REAL UPLOAD
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded bg-slate-700/90 text-slate-300 font-mono text-[9px] font-bold">
+                                SAMPLE SEED
+                              </span>
+                            )}
                             {art.isBreaking && (
                               <span className="px-2 py-0.5 rounded bg-red-600 text-white font-mono text-[10px] font-bold animate-pulse">
                                 BREAKING
@@ -1966,10 +2042,7 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                             </button>
 
                             <button
-                              onClick={() => {
-                                setArticlesList(articlesList.filter(x => x.id !== art.id));
-                                showToast(`Article "${art.title}" deleted.`);
-                              }}
+                              onClick={() => handleDeleteArticle(art.id)}
                               className="text-red-500 hover:text-red-700 font-bold flex items-center gap-0.5"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -2014,7 +2087,7 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 if (!newArticle.title.trim() || !newArticle.excerpt.trim()) {
                   showToast('Please fill out the headline and executive brief.');
@@ -2051,11 +2124,28 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                   keyTakeaways: [newArticle.excerpt]
                 };
 
-                setArticlesList([article, ...articlesList]);
+                try {
+                  const res = await fetch('/api/articles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(article)
+                  });
+                  const data = await res.json();
+                  if (data?.success) {
+                    showToast(`Article "${article.title}" published live! Dummy news phased out.`);
+                    fetchLiveArticles();
+                  } else {
+                    setArticlesList([article, ...articlesList]);
+                    showToast(`Article published.`);
+                  }
+                } catch (_) {
+                  setArticlesList([article, ...articlesList]);
+                  showToast(`Article published.`);
+                }
+
                 if (article.isSpecialReport) {
                   setSpecialReportsList([article, ...specialReportsList]);
                 }
-                showToast(`Article "${article.title}" published successfully!`);
                 setNewArticle({
                   title: '',
                   subtitle: '',

@@ -146,7 +146,7 @@ export default async function ArticlePage({ params }) {
 
       {/* Audio Narration & Actions Bar */}
       <AudioArticlePlayer title={article.title} readTime={article.readTime} />
-      <ArticleActions title={article.title} slug={article.slug} />
+      <ArticleActions title={article.title} slug={article.slug} article={article} />
 
       {/* Executive Intelligence Findings & Key Takeaways Highlight Box */}
       {article.keyTakeaways && article.keyTakeaways.length > 0 && (
