@@ -15,6 +15,10 @@ export const metadata = {
     'Sahel Intelligence', 'Energy Security', 'Food Security', 'Plugins Media Limited', 'Public Intel Security'
   ],
   authors: [{ name: 'Public Intel Security Africa Editorial Board' }],
+  icons: {
+    icon: '/images/logo/favicon-symbol.png',
+    apple: '/images/logo/favicon-symbol.png',
+  },
 };
 
 export const viewport = {

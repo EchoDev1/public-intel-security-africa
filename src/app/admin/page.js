@@ -1589,8 +1589,8 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
         {/* Brand Header */}
         <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-amber-700 text-white flex items-center justify-center font-serif font-black text-lg shadow-sm">
-              PI
+            <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-700/60 p-1 flex items-center justify-center shadow-sm shrink-0">
+              <img src="/images/logo/favicon-symbol.png" alt="Public Intel Africa" className="w-full h-full object-contain" />
             </div>
             <div>
               <div className="text-[10px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-400">
