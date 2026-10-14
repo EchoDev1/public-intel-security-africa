@@ -50,6 +50,7 @@ export default function Navbar() {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [eyewitnessModalOpen, setEyewitnessModalOpen] = useState(false);
   const [utcTime, setUtcTime] = useState('');
+  const [compactUtcTime, setCompactUtcTime] = useState('');
 
   const { isPlaying, togglePlay } = useRadio();
   const { theme, isDark, toggleTheme } = useTheme();
@@ -63,6 +64,14 @@ export default function Navbar() {
     const updateTime = () => {
       const now = new Date();
       setUtcTime(now.toUTCString().replace('GMT', 'UTC'));
+      const d = now.getUTCDate().toString().padStart(2, '0');
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const m = months[now.getUTCMonth()];
+      const y = now.getUTCFullYear();
+      const hh = now.getUTCHours().toString().padStart(2, '0');
+      const mm = now.getUTCMinutes().toString().padStart(2, '0');
+      const ss = now.getUTCSeconds().toString().padStart(2, '0');
+      setCompactUtcTime(`${d} ${m} ${y} ${hh}:${mm}:${ss} UTC`);
     };
     updateTime();
     const interval = setInterval(updateTime, 1000);
@@ -76,15 +85,18 @@ export default function Navbar() {
   return (
     <>
       {/* Topmost Utility Bar */}
-      <div className="bg-slate-900 text-slate-300 text-[11px] py-1.5 px-3 sm:px-4 font-mono border-b border-slate-800 transition-colors">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            <span className="flex items-center gap-1.5 text-amber-400 font-semibold font-sans text-[10.5px] sm:text-[11px]">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block"></span>
+      <div className="bg-slate-900 text-slate-300 text-[11px] py-1.5 px-2.5 sm:px-4 font-mono border-b border-slate-800 transition-colors">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            <span className="flex items-center gap-1 sm:gap-1.5 text-amber-400 font-semibold font-sans text-[10px] sm:text-[11px] shrink-0">
+              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-ping inline-block"></span>
               BUREAU RADAR ACTIVE
             </span>
-            <span className="hidden sm:inline text-slate-600">|</span>
-            <span className="hidden sm:inline text-[10.5px]">{utcTime || '2026-09-28 UTC'}</span>
+            <span className="inline text-slate-600 text-[10px] sm:text-xs">|</span>
+            <span className="inline text-[9px] sm:text-[10.5px] font-mono text-slate-300 shrink-0">
+              <span className="sm:hidden">{compactUtcTime || '14 Oct 2026 00:00:00 UTC'}</span>
+              <span className="hidden sm:inline">{utcTime || '2026-09-28 UTC'}</span>
+            </span>
             <span className="hidden md:inline text-slate-600">|</span>
             <span className="text-slate-400 hidden lg:inline">Pan-African & Global Defense Dispatch</span>
           </div>
@@ -186,21 +198,21 @@ export default function Navbar() {
       {/* Main Navigation Bar - All 9 Features Fully Visible, No Clipping */}
       <nav className={`sticky top-0 z-20 transition-all duration-200 ${
         isScrolled 
-          ? 'bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-md border-b border-slate-200 dark:border-slate-800' 
-          : 'bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800'
+          ? 'bg-white/95 dark:bg-white/95 backdrop-blur-md shadow-md border-b border-slate-200 dark:border-slate-200' 
+          : 'bg-slate-50 dark:bg-white border-b border-slate-200 dark:border-slate-200'
       }`}>
         <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-1.5 sm:py-2">
           
           {/* All 9 Feature Items: Clean wrap on mobile, strictly single straight line on desktop */}
-          <div className="flex flex-wrap lg:flex-nowrap items-center justify-center lg:justify-between xl:justify-center gap-x-1 sm:gap-x-1.5 md:gap-x-2 lg:gap-x-2 xl:gap-x-3 2xl:gap-x-4 gap-y-1 sm:gap-y-1.5 text-[10px] sm:text-[10.5px] md:text-[11px] lg:text-[11px] xl:text-xs font-bold uppercase tracking-tight lg:tracking-normal text-slate-700 dark:text-slate-300 w-full mx-auto">
+          <div className="flex flex-wrap lg:flex-nowrap items-center justify-center lg:justify-between xl:justify-center gap-x-1 sm:gap-x-1.5 md:gap-x-2 lg:gap-x-2 xl:gap-x-3 2xl:gap-x-4 gap-y-1 sm:gap-y-1.5 text-[10px] sm:text-[10.5px] md:text-[11px] lg:text-[11px] xl:text-xs font-bold uppercase tracking-tight lg:tracking-normal text-slate-700 dark:text-slate-800 w-full mx-auto">
             
             {/* 1. Special Reports */}
             <Link 
               href="/special-reports" 
               className={`px-1.5 sm:px-2 md:px-2 lg:px-2.5 xl:px-3 py-1 sm:py-1.5 rounded-md whitespace-nowrap shrink-0 transition-colors ${
                 pathname === '/special-reports' 
-                  ? 'text-amber-800 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 font-black' 
-                  : 'hover:text-amber-700 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'text-amber-800 dark:text-amber-800 bg-amber-50 dark:bg-amber-100/80 font-black' 
+                  : 'hover:text-amber-700 dark:hover:text-amber-700 hover:bg-slate-100 dark:hover:bg-slate-100 text-slate-700 dark:text-slate-800'
               }`}
             >
               Special Reports
@@ -211,8 +223,8 @@ export default function Navbar() {
               href="/community-reports" 
               className={`px-1.5 sm:px-2 md:px-2 lg:px-2.5 xl:px-3 py-1 sm:py-1.5 rounded-md whitespace-nowrap shrink-0 transition-colors ${
                 pathname === '/community-reports' 
-                  ? 'text-amber-800 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 font-black' 
-                  : 'hover:text-amber-700 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'text-amber-800 dark:text-amber-800 bg-amber-50 dark:bg-amber-100/80 font-black' 
+                  : 'hover:text-amber-700 dark:hover:text-amber-700 hover:bg-slate-100 dark:hover:bg-slate-100 text-slate-700 dark:text-slate-800'
               }`}
             >
               Community Reports
@@ -223,8 +235,8 @@ export default function Navbar() {
               href="/eyewitness-reports" 
               className={`px-1.5 sm:px-2 md:px-2 lg:px-2.5 xl:px-3 py-1 sm:py-1.5 rounded-md whitespace-nowrap shrink-0 transition-colors ${
                 pathname === '/eyewitness-reports' 
-                  ? 'text-amber-800 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 font-black' 
-                  : 'hover:text-amber-700 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'text-amber-800 dark:text-amber-800 bg-amber-50 dark:bg-amber-100/80 font-black' 
+                  : 'hover:text-amber-700 dark:hover:text-amber-700 hover:bg-slate-100 dark:hover:bg-slate-100 text-slate-700 dark:text-slate-800'
               }`}
             >
               Eye Witness
@@ -235,8 +247,8 @@ export default function Navbar() {
               href="/webinars" 
               className={`px-1.5 sm:px-2 md:px-2 lg:px-2.5 xl:px-3 py-1 sm:py-1.5 rounded-md whitespace-nowrap shrink-0 transition-colors ${
                 pathname === '/webinars' 
-                  ? 'text-amber-800 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 font-black' 
-                  : 'hover:text-amber-700 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'text-amber-800 dark:text-amber-800 bg-amber-50 dark:bg-amber-100/80 font-black' 
+                  : 'hover:text-amber-700 dark:hover:text-amber-700 hover:bg-slate-100 dark:hover:bg-slate-100 text-slate-700 dark:text-slate-800'
               }`}
             >
               Webinar
@@ -251,8 +263,8 @@ export default function Navbar() {
               <button
                 className={`px-1.5 sm:px-2 md:px-2 lg:px-2.5 xl:px-3 py-1 sm:py-1.5 rounded-md flex items-center gap-0.5 sm:gap-1 whitespace-nowrap transition-colors ${
                   pathname === '/radio' || pathname === '/television' || pathname === '/podcasts' || pathname === '/gallery'
-                    ? 'text-amber-800 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 font-black'
-                    : 'hover:text-amber-700 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    ? 'text-amber-800 dark:text-amber-800 bg-amber-50 dark:bg-amber-100/80 font-black'
+                    : 'hover:text-amber-700 dark:hover:text-amber-700 hover:bg-slate-100 dark:hover:bg-slate-100 text-slate-700 dark:text-slate-800'
                 }`}
               >
                 <span>Broadcast & Media</span>
@@ -260,64 +272,64 @@ export default function Navbar() {
               </button>
 
               {mediaDropdownOpen && (
-                <div className="absolute top-full left-0 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl p-3 space-y-1 animate-in fade-in duration-150 z-50">
+                <div className="absolute top-full left-0 w-64 bg-white dark:bg-white border border-slate-200 dark:border-slate-200 rounded-xl shadow-xl p-3 space-y-1 animate-in fade-in duration-150 z-50">
                   <Link
                     href="/radio"
                     onClick={() => setMediaDropdownOpen(false)}
-                    className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 hover:text-amber-800 dark:hover:text-amber-400 text-xs font-semibold"
+                    className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-50 text-slate-800 dark:text-slate-800 hover:text-amber-800 dark:hover:text-amber-800 text-xs font-semibold"
                   >
                     <RadioIcon className="w-4 h-4 text-amber-600" />
                     <div>
                       <span className="block font-bold">PI Security Radio</span>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">24/7 Live Stream & Schedule</span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-500 font-normal">24/7 Live Stream & Schedule</span>
                     </div>
                   </Link>
 
                   <Link
                     href="/television"
                     onClick={() => setMediaDropdownOpen(false)}
-                    className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 hover:text-amber-800 dark:hover:text-amber-400 text-xs font-semibold"
+                    className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-50 text-slate-800 dark:text-slate-800 hover:text-amber-800 dark:hover:text-amber-800 text-xs font-semibold"
                   >
                     <Tv className="w-4 h-4 text-red-600" />
                     <div>
                       <span className="block font-bold">PI Security Television</span>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">HD Broadcast Newsroom</span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-500 font-normal">HD Broadcast Newsroom</span>
                     </div>
                   </Link>
 
                   <Link
                     href="/podcasts"
                     onClick={() => setMediaDropdownOpen(false)}
-                    className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 hover:text-amber-800 dark:hover:text-amber-400 text-xs font-semibold"
+                    className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-50 text-slate-800 dark:text-slate-800 hover:text-amber-800 dark:hover:text-amber-800 text-xs font-semibold"
                   >
                     <Headphones className="w-4 h-4 text-emerald-600" />
                     <div>
                       <span className="block font-bold">PI Security Podcasts</span>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">On-Demand Investigative Audio</span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-500 font-normal">On-Demand Investigative Audio</span>
                     </div>
                   </Link>
 
                   <Link
                     href="/gallery"
                     onClick={() => setMediaDropdownOpen(false)}
-                    className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 hover:text-amber-800 dark:hover:text-amber-400 text-xs font-semibold"
+                    className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-50 text-slate-800 dark:text-slate-800 hover:text-amber-800 dark:hover:text-amber-800 text-xs font-semibold"
                   >
                     <Camera className="w-4 h-4 text-blue-600" />
                     <div>
                       <span className="block font-bold">News & Photo Gallery</span>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Visual Field Journalism</span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-500 font-normal">Visual Field Journalism</span>
                     </div>
                   </Link>
 
                   <Link
                     href="/coverage/world-news"
                     onClick={() => setMediaDropdownOpen(false)}
-                    className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 hover:text-amber-800 dark:hover:text-amber-400 text-xs font-semibold border-t border-slate-100 dark:border-slate-800 pt-2"
+                    className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-50 text-slate-800 dark:text-slate-800 hover:text-amber-800 dark:hover:text-amber-800 text-xs font-semibold border-t border-slate-100 dark:border-slate-100 pt-2"
                   >
                     <Globe2 className="w-4 h-4 text-blue-600" />
                     <div>
                       <span className="block font-bold">World News Desk</span>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">UN, Multilateral & Global Defense</span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-500 font-normal">UN, Multilateral & Global Defense</span>
                     </div>
                   </Link>
                 </div>
@@ -329,8 +341,8 @@ export default function Navbar() {
               href="/training" 
               className={`px-1.5 sm:px-2 md:px-2 lg:px-2.5 xl:px-3 py-1 sm:py-1.5 rounded-md whitespace-nowrap shrink-0 transition-colors ${
                 pathname === '/training' 
-                  ? 'text-amber-800 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 font-black' 
-                  : 'hover:text-amber-700 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'text-amber-800 dark:text-amber-800 bg-amber-50 dark:bg-amber-100/80 font-black' 
+                  : 'hover:text-amber-700 dark:hover:text-amber-700 hover:bg-slate-100 dark:hover:bg-slate-100 text-slate-700 dark:text-slate-800'
               }`}
             >
               Training Academy
@@ -341,11 +353,11 @@ export default function Navbar() {
               href="/women-in-security" 
               className={`px-1.5 sm:px-2 md:px-2 lg:px-2.5 xl:px-3 py-1 sm:py-1.5 rounded-md flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors ${
                 pathname === '/women-in-security' 
-                  ? 'text-amber-800 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 font-black' 
-                  : 'hover:text-amber-700 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'text-amber-800 dark:text-amber-800 bg-amber-50 dark:bg-amber-100/80 font-black' 
+                  : 'hover:text-amber-700 dark:hover:text-amber-700 hover:bg-slate-100 dark:hover:bg-slate-100 text-slate-700 dark:text-slate-800'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-600" />
               <span>Women in Security</span>
             </Link>
 
@@ -358,8 +370,8 @@ export default function Navbar() {
               <button
                 className={`px-1.5 sm:px-2 md:px-2 lg:px-2.5 xl:px-3 py-1 sm:py-1.5 rounded-md flex items-center gap-0.5 sm:gap-1 whitespace-nowrap transition-colors ${
                   pathname === '/partnership' || pathname === '/collaboration'
-                    ? 'text-amber-800 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 font-black'
-                    : 'hover:text-amber-700 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    ? 'text-amber-800 dark:text-amber-800 bg-amber-50 dark:bg-amber-100/80 font-black'
+                    : 'hover:text-amber-700 dark:hover:text-amber-700 hover:bg-slate-100 dark:hover:bg-slate-100 text-slate-700 dark:text-slate-800'
                 }`}
               >
                 <span>Partnership</span>
@@ -367,18 +379,18 @@ export default function Navbar() {
               </button>
 
               {partnerDropdownOpen && (
-                <div className="absolute top-full left-0 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl p-2 space-y-1 animate-in fade-in duration-150 z-50">
+                <div className="absolute top-full left-0 w-56 bg-white dark:bg-white border border-slate-200 dark:border-slate-200 rounded-xl shadow-xl p-2 space-y-1 animate-in fade-in duration-150 z-50">
                   <Link
                     href="/partnership"
                     onClick={() => setPartnerDropdownOpen(false)}
-                    className="block p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 hover:text-amber-800 dark:hover:text-amber-400 text-xs font-semibold"
+                    className="block p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-50 text-slate-800 dark:text-slate-800 hover:text-amber-800 dark:hover:text-amber-800 text-xs font-semibold"
                   >
                     Partnership
                   </Link>
                   <Link
                     href="/collaboration"
                     onClick={() => setPartnerDropdownOpen(false)}
-                    className="block p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 hover:text-amber-800 dark:hover:text-amber-400 text-xs font-semibold"
+                    className="block p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-50 text-slate-800 dark:text-slate-800 hover:text-amber-800 dark:hover:text-amber-800 text-xs font-semibold"
                   >
                     Collaboration
                   </Link>
@@ -391,8 +403,8 @@ export default function Navbar() {
               href="/contacts" 
               className={`px-1.5 sm:px-2 md:px-2 lg:px-2.5 xl:px-3 py-1 sm:py-1.5 rounded-md whitespace-nowrap shrink-0 transition-colors ${
                 pathname === '/contacts' 
-                  ? 'text-amber-800 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 font-black' 
-                  : 'hover:text-amber-700 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'text-amber-800 dark:text-amber-800 bg-amber-50 dark:bg-amber-100/80 font-black' 
+                  : 'hover:text-amber-700 dark:hover:text-amber-700 hover:bg-slate-100 dark:hover:bg-slate-100 text-slate-700 dark:text-slate-800'
               }`}
             >
               Contacts
