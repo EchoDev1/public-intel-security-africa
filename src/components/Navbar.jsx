@@ -84,51 +84,51 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Topmost Utility Bar */}
-      <div className="bg-slate-900 text-slate-300 text-[11px] py-1.5 px-2.5 sm:px-4 font-mono border-b border-slate-800 transition-colors">
+      {/* Topmost Utility Bar - White in Light Mode, Dark in Dark Mode */}
+      <div className="bg-white text-slate-700 border-b border-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800 text-[11px] py-1.5 px-2.5 sm:px-4 font-mono transition-colors">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 overflow-x-auto scrollbar-none">
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-            <span className="flex items-center gap-1 sm:gap-1.5 text-amber-400 font-semibold font-sans text-[10px] sm:text-[11px] shrink-0">
-              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-ping inline-block"></span>
+            <span className="flex items-center gap-1 sm:gap-1.5 text-amber-700 dark:text-amber-400 font-semibold font-sans text-[10px] sm:text-[11px] shrink-0">
+              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 animate-ping inline-block"></span>
               BUREAU RADAR ACTIVE
             </span>
-            <span className="inline text-slate-600 text-[10px] sm:text-xs">|</span>
-            <span className="inline text-[9px] sm:text-[10.5px] font-mono text-slate-300 shrink-0">
+            <span className="inline text-slate-300 dark:text-slate-600 text-[10px] sm:text-xs">|</span>
+            <span className="inline text-[9px] sm:text-[10.5px] font-mono text-slate-600 dark:text-slate-300 shrink-0">
               <span className="sm:hidden">{compactUtcTime || '14 Oct 2026 00:00:00 UTC'}</span>
               <span className="hidden sm:inline">{utcTime || '2026-09-28 UTC'}</span>
             </span>
-            <span className="hidden md:inline text-slate-600">|</span>
-            <span className="text-slate-400 hidden lg:inline">Pan-African & Global Defense Dispatch</span>
+            <span className="hidden md:inline text-slate-300 dark:text-slate-600">|</span>
+            <span className="text-slate-500 dark:text-slate-400 hidden lg:inline">Pan-African & Global Defense Dispatch</span>
           </div>
 
           <div className="flex items-center gap-3 sm:gap-5 shrink-0">
             <button 
               onClick={() => togglePlay()}
-              className="flex items-center gap-1.5 text-amber-400 hover:text-amber-300 font-sans font-bold text-[10.5px] sm:text-xs uppercase tracking-wider transition-colors"
+              className="flex items-center gap-1.5 text-amber-700 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 font-sans font-bold text-[10.5px] sm:text-xs uppercase tracking-wider transition-colors"
             >
-              <RadioIcon className={`w-3.5 h-3.5 ${isPlaying ? 'animate-spin text-red-500' : ''}`} />
+              <RadioIcon className={`w-3.5 h-3.5 ${isPlaying ? 'animate-spin text-red-500' : 'text-amber-600 dark:text-amber-400'}`} />
               <span className="hidden xs:inline">{isPlaying ? 'PAUSE RADIO' : 'LISTEN LIVE'}</span>
               <span className="xs:hidden">RADIO</span>
             </button>
-            <span className="text-slate-600">|</span>
+            <span className="text-slate-300 dark:text-slate-600">|</span>
             {(isLoggedIn && (user?.role === 'admin' || user?.email?.toLowerCase() === 'ekpendudakore@gmail.com')) ? (
               <>
                 <Link 
                   href="/admin" 
-                  className="hover:text-amber-300 text-amber-400 font-bold transition-colors flex items-center gap-1.5 font-sans text-[10.5px] sm:text-xs tracking-wider"
+                  className="hover:text-amber-800 text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 font-bold transition-colors flex items-center gap-1.5 font-sans text-[10.5px] sm:text-xs tracking-wider"
                 >
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                   <span>ADMIN DASHBOARD</span>
                 </Link>
-                <span className="text-slate-600">|</span>
+                <span className="text-slate-300 dark:text-slate-600">|</span>
               </>
             ) : null}
 
             <button 
               onClick={() => openAuthModal(isLoggedIn ? 'signout' : 'signin')}
-              className="hover:text-amber-400 transition-colors flex items-center gap-1 font-sans text-[10.5px] sm:text-xs"
+              className="hover:text-amber-700 text-slate-700 dark:hover:text-amber-400 dark:text-slate-300 transition-colors flex items-center gap-1 font-sans text-[10.5px] sm:text-xs font-semibold"
             >
-              <User className="w-3.5 h-3.5 text-amber-500" />
+              <User className="w-3.5 h-3.5 text-amber-600 dark:text-amber-500" />
               <span>{isLoggedIn ? 'MY ACCOUNT' : 'SIGN IN'}</span>
             </button>
           </div>
@@ -139,12 +139,12 @@ export default function Navbar() {
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white relative z-30 transition-colors">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3 md:py-4 flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3">
           
-          {/* Brand Identity - Maintained at Top Left Corner on Mobile */}
+          {/* Brand Identity */}
           <div className="w-full md:w-auto flex items-center justify-start shrink-0">
             <Logo variant={isDark ? "dark" : "light"} size="default" />
           </div>
 
-          {/* Right Action Widgets - Orderly and professional at Right Down Corner on Mobile */}
+          {/* Right Action Widgets */}
           <div className="w-full md:w-auto flex items-center justify-end gap-1.5 sm:gap-2.5 shrink-0">
             {/* The Navigation Menu Button - Bar Icon Alone */}
             <button
@@ -198,21 +198,21 @@ export default function Navbar() {
       {/* Main Navigation Bar - All 9 Features Fully Visible, No Clipping */}
       <nav className={`sticky top-0 z-20 transition-all duration-200 ${
         isScrolled 
-          ? 'bg-white/95 dark:bg-white/95 backdrop-blur-md shadow-md border-b border-slate-200 dark:border-slate-200' 
-          : 'bg-slate-50 dark:bg-white border-b border-slate-200 dark:border-slate-200'
+          ? 'bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-md border-b border-slate-200 dark:border-slate-800' 
+          : 'bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800'
       }`}>
         <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-1.5 sm:py-2">
           
           {/* All 9 Feature Items: Clean wrap on mobile, strictly single straight line on desktop */}
-          <div className="flex flex-wrap lg:flex-nowrap items-center justify-center lg:justify-between xl:justify-center gap-x-1 sm:gap-x-1.5 md:gap-x-2 lg:gap-x-2 xl:gap-x-3 2xl:gap-x-4 gap-y-1 sm:gap-y-1.5 text-[10px] sm:text-[10.5px] md:text-[11px] lg:text-[11px] xl:text-xs font-bold uppercase tracking-tight lg:tracking-normal text-slate-700 dark:text-slate-800 w-full mx-auto">
+          <div className="flex flex-wrap lg:flex-nowrap items-center justify-center lg:justify-between xl:justify-center gap-x-1 sm:gap-x-1.5 md:gap-x-2 lg:gap-x-2 xl:gap-x-3 2xl:gap-x-4 gap-y-1 sm:gap-y-1.5 text-[10px] sm:text-[10.5px] md:text-[11px] lg:text-[11px] xl:text-xs font-bold uppercase tracking-tight lg:tracking-normal text-slate-700 dark:text-slate-300 w-full mx-auto">
             
             {/* 1. Special Reports */}
             <Link 
               href="/special-reports" 
               className={`px-1.5 sm:px-2 md:px-2 lg:px-2.5 xl:px-3 py-1 sm:py-1.5 rounded-md whitespace-nowrap shrink-0 transition-colors ${
                 pathname === '/special-reports' 
-                  ? 'text-amber-800 dark:text-amber-800 bg-amber-50 dark:bg-amber-100/80 font-black' 
-                  : 'hover:text-amber-700 dark:hover:text-amber-700 hover:bg-slate-100 dark:hover:bg-slate-100 text-slate-700 dark:text-slate-800'
+                  ? 'text-amber-800 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 font-black' 
+                  : 'hover:text-amber-700 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
               Special Reports

@@ -2,14 +2,20 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function Logo({ 
-  variant = 'light', // 'light' for white/auto backgrounds, 'dark' for permanently dark backgrounds (footer)
+  variant = 'auto', // 'auto' (theme-responsive), 'light' (white surface), 'dark' (dark surface)
   size = 'default',  // 'compact', 'default', 'large'
   showTagline = true,
   href = '/'
 }) {
-  const isPermanentlyDark = variant === 'dark';
+  const { isDark: themeIsDark, mounted } = useTheme();
+
+  // If variant is explicitly specified, respect it. Otherwise, follow theme once mounted.
+  const isDark = variant === 'dark' || (variant === 'auto' && mounted && themeIsDark);
+  const isExplicitDark = variant === 'dark';
+  const isExplicitLight = variant === 'light';
 
   // Precision responsive height mappings tailored to the authentic 4.28:1 logo aspect ratio
   const logoHeights = {
@@ -22,7 +28,7 @@ export default function Logo({
     <div className="flex flex-col justify-center select-none group">
       {/* Authentic Master Brand Graphic Lockup (Exact words and symbol from official branding) */}
       <div className="relative inline-flex items-center">
-        {isPermanentlyDark ? (
+        {isExplicitDark ? (
           /* Permanently Dark Surfaces (e.g., Global Footer) */
           <img
             src="/images/logo/logo-dark.png"
@@ -31,20 +37,29 @@ export default function Logo({
             loading="eager"
             decoding="async"
           />
+        ) : isExplicitLight ? (
+          /* Permanently Light / White Surfaces */
+          <img
+            src="/images/logo/logo-light.png"
+            alt="Public Intel Security Africa"
+            className={`${logoHeights[size]} w-auto object-contain transition-transform duration-200 group-hover:scale-[1.01]`}
+            loading="eager"
+            decoding="async"
+          />
         ) : (
-          /* Responsive to Theme (Seamless Instant Switch with Zero Hydration Mismatch) */
+          /* Responsive to Theme */
           <>
             <img
               src="/images/logo/logo-light.png"
               alt="Public Intel Security Africa"
-              className={`${logoHeights[size]} w-auto object-contain block dark:hidden transition-transform duration-200 group-hover:scale-[1.01]`}
+              className={`${logoHeights[size]} w-auto object-contain ${isDark ? 'hidden' : 'block'} dark:hidden transition-transform duration-200 group-hover:scale-[1.01]`}
               loading="eager"
               decoding="async"
             />
             <img
               src="/images/logo/logo-dark.png"
               alt="Public Intel Security Africa"
-              className={`${logoHeights[size]} w-auto object-contain hidden dark:block transition-transform duration-200 group-hover:scale-[1.01]`}
+              className={`${logoHeights[size]} w-auto object-contain ${isDark ? 'block' : 'hidden'} hidden dark:block transition-transform duration-200 group-hover:scale-[1.01]`}
               loading="eager"
               decoding="async"
             />
@@ -55,11 +70,11 @@ export default function Logo({
       {/* Shorter, Highly Detailed & Fine Credential Tagline */}
       {showTagline && (
         <div className="mt-1 flex items-center gap-1 sm:gap-1.5 text-[8px] sm:text-[9px] md:text-[9.5px] uppercase font-mono tracking-wider">
-          <span className={`font-bold ${isPermanentlyDark ? 'text-amber-400' : 'text-amber-700 dark:text-amber-400'}`}>
+          <span className={`font-bold transition-colors ${isDark ? 'text-amber-400' : 'text-amber-700 dark:text-amber-400'}`}>
             PLUGINS MEDIA
           </span>
-          <span className={`text-[7px] ${isPermanentlyDark ? 'text-slate-600' : 'text-slate-400 dark:text-slate-600'}`}>•</span>
-          <span className={`font-medium ${isPermanentlyDark ? 'text-slate-400' : 'text-slate-600 dark:text-slate-400'}`}>
+          <span className={`text-[7px] transition-colors ${isDark ? 'text-slate-600' : 'text-slate-400 dark:text-slate-600'}`}>•</span>
+          <span className={`font-medium transition-colors ${isDark ? 'text-slate-400' : 'text-slate-600 dark:text-slate-400'}`}>
             Security Media Production
           </span>
         </div>
