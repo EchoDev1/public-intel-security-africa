@@ -1,32 +1,31 @@
 import { NextResponse } from 'next/server';
 import { 
-  getUserByEmail, 
   getPendingVerification, 
-  saveVerifiedUser 
+  getUserByEmail,
+  verifyUserCredentials 
 } from '@/lib/auth/store';
 import { sendLoginAlertEmail } from '@/lib/email/resend';
+import { getClientInfo } from '@/lib/network/clientInfo';
 
 export async function POST(request) {
   try {
     const { email, password, role } = await request.json();
 
-    if (!email) {
+    if (!email || !password) {
       return NextResponse.json(
-        { error: 'Email address is required.' },
+        { error: 'Email address and password are required.' },
         { status: 400 }
       );
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const userAgent = request.headers.get('user-agent') || 'Web Browser';
-    const forwardedFor = request.headers.get('x-forwarded-for');
-    const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : 'Local / Secured IP';
+    const { ip, country, userAgent } = getClientInfo(request);
 
-    // 1. Check Super Admin Credentials
+    // 1. Super Admin Authentication
     if (cleanEmail === 'ekpendudakore@gmail.com') {
       if (password !== 'ladydakore@artellium90') {
         return NextResponse.json(
-          { error: 'Invalid admin credentials. Please enter the correct password.' },
+          { error: 'Invalid administrator credentials. Access denied.' },
           { status: 401 }
         );
       }
@@ -42,14 +41,15 @@ export async function POST(request) {
         avatarInitial: 'D'
       };
 
-      // Dispatch instant login notification email to Super Admin via Resend
+      // Dispatch security notification email to Super Admin via Resend
       try {
         await sendLoginAlertEmail({
           to: 'Ekpendudakore@gmail.com',
           fullName: 'Lady Dakore Ekpendu',
           timestamp: new Date().toUTCString(),
           userAgent,
-          ip
+          ip,
+          country
         });
       } catch (err) {
         console.warn('Admin login alert email note:', err.message);
@@ -63,45 +63,49 @@ export async function POST(request) {
       });
     }
 
-    // 2. Reject non-admin role escalation
+    // 2. Reject unauthorized admin role escalation
     if (role === 'admin') {
       return NextResponse.json(
-        { error: 'Unauthorized. Admin credentials required.' },
+        { error: 'Unauthorized role assignment. Administrator credentials required.' },
         { status: 403 }
       );
     }
 
-    // 3. Check if user is pending verification
+    // 3. Check if account is still unverified from sign-up
+    // Verification is strictly handled in Create Account; login only alerts user to activate
+    const existingVerifiedUser = await getUserByEmail(cleanEmail);
     const pending = await getPendingVerification(cleanEmail);
-    if (pending) {
+
+    if (pending && !existingVerifiedUser) {
       return NextResponse.json({
         success: false,
-        requiresVerification: true,
-        email: cleanEmail,
-        error: 'Your email address has not been verified yet. Please enter your verification code to continue.'
-      }, { status: 403 });
+        error: 'This account has not been activated yet. Please enter the verification code sent when you created your account, or register a new account.'
+      }, { status: 401 });
     }
 
-    // 4. Look up user
-    let user = await getUserByEmail(cleanEmail);
+    // 4. Strict Credential Verification (Password Matching)
+    // Random emails and wrong passwords will be firmly rejected
+    const authResult = await verifyUserCredentials(cleanEmail, password);
 
-    // If user not in store yet, register them as verified reader
-    if (!user) {
-      user = await saveVerifiedUser({
-        email: cleanEmail,
-        fullName: cleanEmail.split('@')[0],
-        passwordHash: ''
-      });
+    if (!authResult.valid) {
+      return NextResponse.json({
+        success: false,
+        error: authResult.error || 'Invalid email or password. Please verify your credentials or create an account.'
+      }, { status: 401 });
     }
+
+    const verifiedUser = authResult.user;
 
     // 5. Dispatch instant sign-in security notification email via Resend
+    // Dispatched ONLY on valid login from the login section
     try {
       await sendLoginAlertEmail({
         to: cleanEmail,
-        fullName: user.fullName || user.displayName,
+        fullName: verifiedUser.fullName || verifiedUser.displayName,
         timestamp: new Date().toUTCString(),
         userAgent,
-        ip
+        ip,
+        country
       });
     } catch (err) {
       console.warn('Reader login alert email note:', err.message);
@@ -109,7 +113,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
-      user,
+      user: verifiedUser,
       isAdmin: false,
       redirectTo: '/dashboard'
     });

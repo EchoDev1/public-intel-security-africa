@@ -46,7 +46,8 @@ export async function POST(request) {
     const user = await saveVerifiedUser({
       email: cleanEmail,
       fullName: pending.fullName,
-      passwordHash: pending.passwordHash
+      passwordHash: pending.passwordHash,
+      rawPassword: pending.rawPassword
     });
 
     // Send Welcome / Confirmation email via Resend

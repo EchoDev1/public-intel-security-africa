@@ -183,18 +183,19 @@ export async function sendWelcomeVerifiedEmail({ to, fullName }) {
 }
 
 /**
- * 3. Login Security Alert Email (Dispatched on every sign-in)
+ * 3. Login Security Alert Email (Dispatched on every successful sign-in)
  */
-export async function sendLoginAlertEmail({ to, fullName, timestamp, userAgent, ip }) {
+export async function sendLoginAlertEmail({ to, fullName, timestamp, userAgent, ip, country }) {
   const recipientName = fullName || to.split('@')[0];
   const formattedTime = timestamp || new Date().toUTCString();
-  const subject = `Security Alert: New Sign-in to Your Public Intel Account`;
+  const subject = `Security Alert: Successful Sign-in to Your Public Intel Account`;
 
   const html = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>Login Security Alert</title>
     </head>
     <body style="margin: 0; padding: 0; background-color: #020617; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
@@ -202,7 +203,7 @@ export async function sendLoginAlertEmail({ to, fullName, timestamp, userAgent, 
         
         <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-bottom: 2px solid #f59e0b; padding: 28px 32px;">
           <div style="display: inline-block; padding: 3px 8px; background-color: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; border-radius: 4px; font-size: 10px; font-weight: 800; color: #f59e0b; text-transform: uppercase; margin-bottom: 6px;">
-            Security Telemetry
+            Access &amp; Security Telemetry
           </div>
           <h1 style="margin: 0; font-size: 20px; font-weight: 800; color: #ffffff;">
             PUBLIC INTEL SECURITY AFRICA
@@ -211,10 +212,10 @@ export async function sendLoginAlertEmail({ to, fullName, timestamp, userAgent, 
 
         <div style="padding: 32px; color: #e2e8f0;">
           <h2 style="margin-top: 0; font-size: 17px; font-weight: 700; color: #ffffff;">
-            New Account Sign-in Detected
+            Successful Sign-in Detected
           </h2>
           <p style="font-size: 14px; line-height: 1.6; color: #94a3b8; margin: 8px 0 20px;">
-            Hello <strong>${recipientName}</strong>, we recorded a successful login to your Public Intel Security Africa account.
+            Hello <strong>${recipientName}</strong>, we recorded a successful sign-in to your verified Public Intel Security Africa reader account.
           </p>
 
           <!-- Audit Table -->
@@ -232,6 +233,11 @@ export async function sendLoginAlertEmail({ to, fullName, timestamp, userAgent, 
               <tr style="border-bottom: 1px solid #334155;">
                 <td style="padding: 10px 16px; color: #94a3b8; font-weight: 600;">IP Address</td>
                 <td style="padding: 10px 16px; color: #ffffff; font-family: monospace;">${ip}</td>
+              </tr>` : ''}
+              ${country ? `
+              <tr style="border-bottom: 1px solid #334155;">
+                <td style="padding: 10px 16px; color: #94a3b8; font-weight: 600;">Geographic Origin</td>
+                <td style="padding: 10px 16px; color: #38bdf8; font-weight: 600;">${country}</td>
               </tr>` : ''}
               ${userAgent ? `
               <tr>

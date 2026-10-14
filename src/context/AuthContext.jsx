@@ -93,11 +93,6 @@ export function AuthProvider({ children }) {
       const data = await response.json();
 
       if (!response.ok) {
-        if (data.requiresVerification) {
-          setPendingEmail(cleanEmail);
-          setAuthModalMode('verify');
-          return { success: false, requiresVerification: true, error: data.error };
-        }
         return { success: false, error: data.error || 'Invalid credentials.' };
       }
 

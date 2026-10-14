@@ -183,13 +183,6 @@ export default function UserAuthModal() {
     setIsSubmitting(false);
 
     if (!res.success) {
-      if (res.requiresVerification) {
-        setStatusMessage({ 
-          type: 'error', 
-          text: res.error || 'Please verify your email address to access your account.' 
-        });
-        return;
-      }
       setStatusMessage({ type: 'error', text: res.error || 'Invalid email or password.' });
       return;
     }
