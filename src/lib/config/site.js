@@ -8,7 +8,7 @@ export const SITE_CONFIG = {
   shortName: 'Public Intel Africa',
   description:
     'Public Intel Security Africa is a leading multi-platform security media production of Plugins Media Limited, dedicated to reshaping public discourse on security through informed journalism, expert analysis, strategic dialogue, and solution-driven events.',
-  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://publicintelsecurity.africa',
+  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://www.publicintelsecurity.africa',
   ogImage: '/images/logo/logo-dark.png',
   publisher: {
     name: 'Plugins Media Limited',
