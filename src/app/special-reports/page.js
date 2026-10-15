@@ -4,6 +4,21 @@ import { Shield } from 'lucide-react';
 import { getSpecialReports } from '@/lib/data/articles';
 import ArticleCard from '@/components/ArticleCard';
 
+export const metadata = {
+  title: 'Special Investigative Reports & Strategic Whitepapers',
+  description:
+    'In-depth security dossiers, data forensics, intelligence assessments, and policy whitepapers covering continental defense, critical infrastructure, and geopolitical conflicts across Africa.',
+  alternates: {
+    canonical: '/special-reports',
+  },
+  openGraph: {
+    title: 'Special Investigative Reports & Whitepapers | Public Intel Africa',
+    description:
+      'In-depth security dossiers, data forensics, and policy whitepapers across Africa.',
+    url: '/special-reports',
+  },
+};
+
 export default function SpecialReportsPage() {
   const reports = getSpecialReports();
 

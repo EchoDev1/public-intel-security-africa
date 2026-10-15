@@ -2,6 +2,21 @@ import React from 'react';
 import Link from 'next/link';
 import { Shield, Award, Globe, Radio, Tv } from 'lucide-react';
 
+export const metadata = {
+  title: 'Institutional Profile & Mandate | Plugins Media Limited',
+  description:
+    'Public Intel Security Africa is a leading multi-platform security media production of Plugins Media Limited, dedicated to reshaping public discourse on African security through informed journalism and strategic dialogue.',
+  alternates: {
+    canonical: '/about',
+  },
+  openGraph: {
+    title: 'About Public Intel Security Africa | Plugins Media Limited',
+    description:
+      'Reshaping public discourse on African security through informed journalism, expert analysis, and strategic dialogue.',
+    url: '/about',
+  },
+};
+
 export default function AboutPage() {
   return (
     <div className="py-12 px-4 max-w-5xl mx-auto space-y-12 bg-white">

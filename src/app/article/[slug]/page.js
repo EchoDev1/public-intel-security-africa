@@ -15,9 +15,69 @@ import { ARTICLES, getArticleBySlug } from '@/lib/data/articles';
 import ArticleCard from '@/components/ArticleCard';
 import AudioArticlePlayer from './AudioArticlePlayer';
 import ArticleActions from './ArticleActions';
+import JsonLd from '@/components/seo/JsonLd';
+import { SITE_CONFIG } from '@/lib/config/site';
 
 export function generateStaticParams() {
   return ARTICLES.map((art) => ({ slug: art.slug }));
+}
+
+export async function generateMetadata({ params }) {
+  const { slug } = await params;
+  const article = getArticleBySlug(slug);
+
+  if (!article) {
+    return {
+      title: 'Article Not Found',
+      description: 'The requested security intelligence report does not exist.',
+    };
+  }
+
+  const articleUrl = `/article/${article.slug}`;
+  const ogImages = article.coverImage
+    ? [
+        {
+          url: article.coverImage,
+          width: 1200,
+          height: 630,
+          alt: article.coverCaption || article.title,
+        },
+      ]
+    : ['/images/logo/logo-dark.png'];
+
+  return {
+    title: article.title,
+    description: article.excerpt || article.subtitle,
+    keywords: [
+      article.categoryName,
+      article.region || 'Africa',
+      article.country || 'Continental Africa',
+      'African Security Intelligence',
+      'Strategic Assessment',
+      'Public Intel Security Africa',
+    ],
+    authors: [{ name: article.author?.name || 'Public Intel Security Africa Editorial Board' }],
+    alternates: {
+      canonical: articleUrl,
+    },
+    openGraph: {
+      type: 'article',
+      url: articleUrl,
+      title: article.title,
+      description: article.excerpt || article.subtitle,
+      publishedTime: article.publishedAt,
+      modifiedTime: article.publishedAt,
+      section: article.categoryName,
+      authors: [article.author?.name || 'Public Intel Africa Editorial Board'],
+      images: ogImages,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: article.title,
+      description: article.excerpt || article.subtitle,
+      images: ogImages,
+    },
+  };
 }
 
 export default async function ArticlePage({ params }) {
@@ -30,8 +90,67 @@ export default async function ArticlePage({ params }) {
 
   const relatedArticles = ARTICLES.filter((a) => a.id !== article.id).slice(0, 3);
 
+  const articleSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'NewsArticle',
+    headline: article.title,
+    description: article.excerpt || article.subtitle,
+    image: [article.coverImage],
+    datePublished: article.publishedAt,
+    dateModified: article.publishedAt,
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `${SITE_CONFIG.url}/article/${article.slug}`,
+    },
+    articleSection: article.categoryName,
+    author: [
+      {
+        '@type': 'Person',
+        name: article.author?.name || 'Public Intel Africa Bureau',
+        jobTitle: article.author?.role || 'Defense Intelligence Analyst',
+        url: `${SITE_CONFIG.url}/about`,
+      },
+    ],
+    publisher: {
+      '@type': 'Organization',
+      name: SITE_CONFIG.name,
+      url: SITE_CONFIG.url,
+      logo: {
+        '@type': 'ImageObject',
+        url: `${SITE_CONFIG.url}/images/logo/logo-dark.png`,
+      },
+    },
+  };
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: SITE_CONFIG.url,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: article.categoryName,
+        item: `${SITE_CONFIG.url}/coverage/${article.categorySlug}`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: article.title,
+        item: `${SITE_CONFIG.url}/article/${article.slug}`,
+      },
+    ],
+  };
+
   return (
     <article className="py-10 px-4 max-w-5xl mx-auto space-y-10 bg-white">
+      <JsonLd data={articleSchema} />
+      <JsonLd data={breadcrumbSchema} />
       
       {/* Breadcrumbs */}
       <div className="flex items-center justify-between text-xs text-slate-500 pb-2 border-b border-slate-200 font-medium">

@@ -16,12 +16,41 @@ import TrainingAcademySection from '@/components/TrainingAcademySection';
 import EconomicSecuritySection from '@/components/EconomicSecuritySection';
 import NewsletterSection from '@/components/NewsletterSection';
 import { ARTICLES, getSpecialReports } from '@/lib/data/articles';
+import JsonLd from '@/components/seo/JsonLd';
+import { SITE_CONFIG } from '@/lib/config/site';
 
 export default function HomePage() {
   const specialReports = getSpecialReports();
 
+  const homeBreadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: SITE_CONFIG.url,
+      },
+    ],
+  };
+
+  const homeFeaturedListSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Top Continental Security Intelligence Reports',
+    itemListElement: specialReports.slice(0, 5).map((art, idx) => ({
+      '@type': 'ListItem',
+      position: idx + 1,
+      url: `${SITE_CONFIG.url}/article/${art.slug}`,
+      name: art.title,
+    })),
+  };
+
   return (
     <div className="space-y-10 sm:space-y-12 pb-16 bg-white dark:bg-slate-950 transition-colors">
+      <JsonLd data={homeBreadcrumbSchema} />
+      <JsonLd data={homeFeaturedListSchema} />
       
       {/* 1. Hero Featured Section (Current Hero Page + Trending in All Features side-by-side) */}
       <HeroFeatured />

@@ -6,9 +6,63 @@ import { Shield, ArrowLeft, Globe, Filter } from 'lucide-react';
 import { getCategoryBySlug, CATEGORIES } from '@/lib/data/categories';
 import { getArticlesByCategory, ARTICLES } from '@/lib/data/articles';
 import ArticleCard from '@/components/ArticleCard';
+import JsonLd from '@/components/seo/JsonLd';
+import { SITE_CONFIG } from '@/lib/config/site';
 
 export function generateStaticParams() {
   return CATEGORIES.map((c) => ({ category: c.slug }));
+}
+
+export async function generateMetadata({ params }) {
+  const { category: categorySlug } = await params;
+  const category = getCategoryBySlug(categorySlug);
+
+  if (!category) {
+    return {
+      title: 'Category Not Found',
+      description: 'The requested security intelligence category does not exist.',
+    };
+  }
+
+  const categoryUrl = `/coverage/${category.slug}`;
+
+  return {
+    title: `${category.name} | Security Intelligence & Strategic Defense`,
+    description: category.description,
+    keywords: [
+      category.name,
+      category.pillar,
+      'African Security',
+      'Defense Intelligence',
+      'Strategic Assessment',
+      'Public Intel Security Africa',
+    ],
+    alternates: {
+      canonical: categoryUrl,
+    },
+    openGraph: {
+      type: 'website',
+      url: categoryUrl,
+      title: `${category.name} | Security Intelligence & Defense`,
+      description: category.description,
+      images: category.featuredImage
+        ? [
+            {
+              url: category.featuredImage,
+              width: 1200,
+              height: 630,
+              alt: `${category.name} - Defense Intelligence Brief`,
+            },
+          ]
+        : ['/images/logo/logo-dark.png'],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${category.name} | Security Intelligence & Defense`,
+      description: category.description,
+      images: category.featuredImage ? [category.featuredImage] : ['/images/logo/logo-dark.png'],
+    },
+  };
 }
 
 export default async function CategoryDetailPage({ params }) {
@@ -31,8 +85,42 @@ export default async function CategoryDetailPage({ params }) {
     }));
   }
 
+  const categorySchema = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: `${category.name} - Public Intel Security Africa`,
+    description: category.description,
+    url: `${SITE_CONFIG.url}/coverage/${category.slug}`,
+    publisher: {
+      '@type': 'NewsMediaOrganization',
+      name: SITE_CONFIG.name,
+      url: SITE_CONFIG.url,
+    },
+  };
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: SITE_CONFIG.url,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: category.name,
+        item: `${SITE_CONFIG.url}/coverage/${category.slug}`,
+      },
+    ],
+  };
+
   return (
     <div className="py-10 px-4 max-w-7xl mx-auto space-y-10 bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-colors">
+      <JsonLd data={categorySchema} />
+      <JsonLd data={breadcrumbSchema} />
       
       {/* Breadcrumbs - Direct to Home, No generalized coverage directory */}
       <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium">

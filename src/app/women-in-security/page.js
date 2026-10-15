@@ -4,6 +4,21 @@ import Link from 'next/link';
 import { Sparkles, CheckCircle2, ArrowRight } from 'lucide-react';
 import { WOMEN_IN_SECURITY } from '@/lib/data/womenInSecurity';
 
+export const metadata = {
+  title: 'Women in Security & Peacebuilding Network',
+  description:
+    'Championing female military commanders, cyber forensics experts, and strategic negotiators advancing peace and security architectures across Africa.',
+  alternates: {
+    canonical: '/women-in-security',
+  },
+  openGraph: {
+    title: 'Women in Security & Peacebuilding Network | Public Intel Africa',
+    description:
+      'Spotlighting female defense leaders, forensic specialists, and policy architects in Africa.',
+    url: '/women-in-security',
+  },
+};
+
 export default function WomenInSecurityPage() {
   return (
     <div className="py-12 px-4 max-w-7xl mx-auto space-y-12 bg-white">
