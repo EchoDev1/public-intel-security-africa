@@ -71,11 +71,11 @@ export default function Logo({
       {showTagline && (
         <div className="mt-1 flex items-center gap-1 sm:gap-1.5 text-[8px] sm:text-[9px] md:text-[9.5px] uppercase font-mono tracking-wider">
           <span className={`font-bold transition-colors ${isDark ? 'text-amber-400' : 'text-amber-700 dark:text-amber-400'}`}>
-            PLUGINS MEDIA
+            POWERED BY
           </span>
           <span className={`text-[7px] transition-colors ${isDark ? 'text-slate-600' : 'text-slate-400 dark:text-slate-600'}`}>•</span>
           <span className={`font-medium transition-colors ${isDark ? 'text-slate-400' : 'text-slate-600 dark:text-slate-400'}`}>
-            Security Media Production
+            PLUGINS MEDIA
           </span>
         </div>
       )}

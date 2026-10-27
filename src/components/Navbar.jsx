@@ -63,15 +63,17 @@ export default function Navbar() {
 
     const updateTime = () => {
       const now = new Date();
-      setUtcTime(now.toUTCString().replace('GMT', 'UTC'));
-      const d = now.getUTCDate().toString().padStart(2, '0');
+      // Nigeria / West Africa Time (WAT = UTC+1)
+      const adjusted = new Date(now.getTime() + 60 * 60 * 1000);
+      setUtcTime(adjusted.toUTCString().replace('GMT', 'WAT'));
+      const d = adjusted.getUTCDate().toString().padStart(2, '0');
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const m = months[now.getUTCMonth()];
-      const y = now.getUTCFullYear();
-      const hh = now.getUTCHours().toString().padStart(2, '0');
-      const mm = now.getUTCMinutes().toString().padStart(2, '0');
-      const ss = now.getUTCSeconds().toString().padStart(2, '0');
-      setCompactUtcTime(`${d} ${m} ${y} ${hh}:${mm}:${ss} UTC`);
+      const m = months[adjusted.getUTCMonth()];
+      const y = adjusted.getUTCFullYear();
+      const hh = adjusted.getUTCHours().toString().padStart(2, '0');
+      const mm = adjusted.getUTCMinutes().toString().padStart(2, '0');
+      const ss = adjusted.getUTCSeconds().toString().padStart(2, '0');
+      setCompactUtcTime(`${d} ${m} ${y} ${hh}:${mm}:${ss} WAT`);
     };
     updateTime();
     const interval = setInterval(updateTime, 1000);
@@ -94,8 +96,8 @@ export default function Navbar() {
             </span>
             <span className="inline text-slate-300 dark:text-slate-600 text-[10px] sm:text-xs">|</span>
             <span className="inline text-[9px] sm:text-[10.5px] font-mono text-slate-600 dark:text-slate-300 shrink-0">
-              <span className="sm:hidden">{compactUtcTime || '14 Oct 2026 00:00:00 UTC'}</span>
-              <span className="hidden sm:inline">{utcTime || '2026-09-28 UTC'}</span>
+              <span className="sm:hidden">{compactUtcTime || '14 Oct 2026 00:00:00 WAT'}</span>
+              <span className="hidden sm:inline">{utcTime || '2026-09-28 WAT'}</span>
             </span>
             <span className="hidden md:inline text-slate-300 dark:text-slate-600">|</span>
             <span className="text-slate-500 dark:text-slate-400 hidden lg:inline">Pan-African & Global Defense Dispatch</span>
@@ -261,13 +263,13 @@ export default function Navbar() {
               onMouseLeave={() => setMediaDropdownOpen(false)}
             >
               <button
-                className={`px-1.5 sm:px-2 md:px-2 lg:px-2.5 xl:px-3 py-1 sm:py-1.5 rounded-md flex items-center gap-0.5 sm:gap-1 whitespace-nowrap transition-colors ${
+                className={`px-1.5 sm:px-2 md:px-2 lg:px-2.5 xl:px-3 py-1 sm:py-1.5 rounded-md flex items-center gap-0.5 sm:gap-1 whitespace-nowrap uppercase font-bold transition-colors ${
                   pathname === '/radio' || pathname === '/television' || pathname === '/podcasts' || pathname === '/gallery'
                     ? 'text-amber-800 dark:text-amber-800 bg-amber-50 dark:bg-amber-100/80 font-black'
                     : 'hover:text-amber-700 dark:hover:text-amber-700 hover:bg-slate-100 dark:hover:bg-slate-100 text-slate-700 dark:text-slate-800'
                 }`}
               >
-                <span>Broadcast & Media</span>
+                <span>BROADCAST & MEDIA</span>
                 <ChevronDown className="w-3.5 h-3.5" />
               </button>
 
@@ -368,13 +370,13 @@ export default function Navbar() {
               onMouseLeave={() => setPartnerDropdownOpen(false)}
             >
               <button
-                className={`px-1.5 sm:px-2 md:px-2 lg:px-2.5 xl:px-3 py-1 sm:py-1.5 rounded-md flex items-center gap-0.5 sm:gap-1 whitespace-nowrap transition-colors ${
+                className={`px-1.5 sm:px-2 md:px-2 lg:px-2.5 xl:px-3 py-1 sm:py-1.5 rounded-md flex items-center gap-0.5 sm:gap-1 whitespace-nowrap uppercase font-bold transition-colors ${
                   pathname === '/partnership' || pathname === '/collaboration'
                     ? 'text-amber-800 dark:text-amber-800 bg-amber-50 dark:bg-amber-100/80 font-black'
                     : 'hover:text-amber-700 dark:hover:text-amber-700 hover:bg-slate-100 dark:hover:bg-slate-100 text-slate-700 dark:text-slate-800'
                 }`}
               >
-                <span>Partnership</span>
+                <span>PARTNERSHIP</span>
                 <ChevronDown className="w-3.5 h-3.5" />
               </button>
 
