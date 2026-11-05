@@ -128,10 +128,22 @@ export const ARTICLES = new Proxy([], {
 });
 
 export function getArticleBySlug(slug) {
+  if (!slug) return null;
+  const decoded = decodeURIComponent(String(slug)).trim().toLowerCase();
   const all = computeArticles();
-  const found = all.find(art => art.slug === slug);
+  const found = all.find(art => 
+    (art.slug && art.slug.toLowerCase() === decoded) || 
+    (art.id && art.id.toLowerCase() === decoded) ||
+    art.slug === slug ||
+    art.id === slug
+  );
   if (found) return found;
-  return SEED_ARTICLES.find(art => art.slug === slug);
+  return SEED_ARTICLES.find(art => 
+    (art.slug && art.slug.toLowerCase() === decoded) || 
+    (art.id && art.id.toLowerCase() === decoded) ||
+    art.slug === slug ||
+    art.id === slug
+  );
 }
 
 export function getArticlesByCategory(categorySlug) {

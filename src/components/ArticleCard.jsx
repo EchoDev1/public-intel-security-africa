@@ -1,12 +1,20 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Clock, Globe, ArrowUpRight, Shield, Flame } from 'lucide-react';
+import { Clock, Globe, ArrowUpRight, Shield, Flame, Play, Headphones } from 'lucide-react';
 
 export default function ArticleCard({ article, layout = 'standard' }) {
+  const [imageError, setImageError] = useState(false);
+
   if (!article) return null;
+
+  const isRealArticle = Boolean(
+    article.isRealUpload || 
+    (article.id && article.id.startsWith('art-real-')) ||
+    (article.id && !article.id.startsWith('art-00') && !article.id.startsWith('hero-rot-'))
+  );
 
   const threatColor =
     article.threatLevel === 'Critical' ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900/60' :
@@ -20,14 +28,25 @@ export default function ArticleCard({ article, layout = 'standard' }) {
         href={`/article/${article.slug}`}
         className="group flex gap-4 p-3 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800 hover:border-amber-600 dark:hover:border-amber-500 transition-all shadow-xs"
       >
-        <div className="relative w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800">
-          <Image
-            src={article.coverImage}
-            alt={article.title}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
-            sizes="(max-width: 768px) 96px, 96px"
-          />
+        <div className="relative w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center">
+          {isRealArticle && !imageError && article.coverImage ? (
+            <Image
+              src={article.coverImage}
+              alt={article.title}
+              fill
+              unoptimized
+              onError={() => setImageError(true)}
+              className="object-cover group-hover:scale-105 transition-transform duration-300"
+              sizes="(max-width: 768px) 96px, 96px"
+            />
+          ) : (
+            <div className="w-full h-full bg-slate-950 p-2 flex flex-col items-center justify-center text-center">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse mb-1"></span>
+              <span className="text-[8px] font-black uppercase tracking-tight text-amber-300 font-mono leading-tight">
+                PUBLIC INTEL<br/>NEWS INCOMING
+              </span>
+            </div>
+          )}
         </div>
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div>
@@ -50,19 +69,55 @@ export default function ArticleCard({ article, layout = 'standard' }) {
 
   return (
     <article className="group flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-600 dark:hover:border-amber-500 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-1">
-      {/* Cover Image */}
-      <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
-        <Image
-          src={article.coverImage}
-          alt={article.title}
-          fill
-          className="object-cover group-hover:scale-105 transition-transform duration-500"
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
+      {/* Clickable Cover Image / Incoming Card */}
+      <Link href={`/article/${article.slug}`} className="block relative aspect-[16/10] w-full overflow-hidden bg-slate-950 cursor-pointer">
+        {isRealArticle && !imageError && article.coverImage ? (
+          <>
+            <Image
+              src={article.coverImage}
+              alt={article.title}
+              fill
+              unoptimized
+              onError={() => setImageError(true)}
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
+          </>
+        ) : (
+          <div className="w-full h-full bg-radial-[at_top_left] from-slate-900 via-slate-950 to-black p-4 flex flex-col justify-between border-b border-amber-600/30 overflow-hidden select-none">
+            {/* Tactical Grid Background */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#eab3080c_1px,transparent_1px),linear-gradient(to_bottom,#eab3080c_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none"></div>
+
+            {/* Top Tactical Kicker */}
+            <div className="relative z-10 flex items-center justify-between">
+              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[9px] font-mono tracking-widest text-amber-400 bg-amber-950/80 border border-amber-500/40">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                <span>TACTICAL WIRE</span>
+              </span>
+              <Shield className="w-4 h-4 text-amber-500/70" />
+            </div>
+
+            {/* Centered Incoming Typography */}
+            <div className="relative z-10 text-center py-4 my-auto">
+              <div className="text-amber-500/80 font-mono text-[9px] uppercase tracking-widest mb-1">
+                Official Intelligence Dispatch
+              </div>
+              <div className="text-base sm:text-lg font-black tracking-widest uppercase font-mono text-white group-hover:text-amber-400 transition-colors drop-shadow-md">
+                PUBLIC INTEL NEWS INCOMING
+              </div>
+            </div>
+
+            {/* Bottom Telemetry Status */}
+            <div className="relative z-10 flex items-center justify-between text-[8px] font-mono text-slate-400 border-t border-slate-800 pt-1.5">
+              <span>SEC-DESK // AFRICA</span>
+              <span className="text-amber-500 font-bold">STANDBY FOR TRANSMISSION</span>
+            </div>
+          </div>
+        )}
         
-        {/* Category & Threat Badge */}
-        <div className="absolute top-3 left-3 flex items-center gap-2">
+        {/* Category & Badges */}
+        <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5 z-20">
           <span className="px-2.5 py-1 rounded bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-slate-900 dark:text-white text-[10px] font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 shadow-xs">
             {article.categoryName}
           </span>
@@ -72,14 +127,26 @@ export default function ArticleCard({ article, layout = 'standard' }) {
               BREAKING
             </span>
           )}
+          {article.videoUrl && (
+            <span className="px-2 py-0.5 rounded bg-amber-600 text-white text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
+              <Play className="w-2.5 h-2.5 fill-white" />
+              VIDEO
+            </span>
+          )}
+          {article.audioUrl && (
+            <span className="px-2 py-0.5 rounded bg-blue-600 text-white text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
+              <Headphones className="w-2.5 h-2.5" />
+              AUDIO
+            </span>
+          )}
         </div>
 
-        <div className="absolute bottom-3 right-3">
+        <div className="absolute bottom-3 right-3 z-20">
           <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border tracking-wider backdrop-blur-md bg-white/90 dark:bg-slate-900/90 ${threatColor}`}>
             {article.threatLevel}
           </span>
         </div>
-      </div>
+      </Link>
 
       {/* Card Content */}
       <div className="p-5 flex-1 flex flex-col justify-between">
@@ -107,19 +174,15 @@ export default function ArticleCard({ article, layout = 'standard' }) {
           </p>
         </div>
 
-        {/* Author / Footer info */}
+        {/* Author / Footer info with Official Bureau Badge (No dummy photo) */}
         <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="relative w-6 h-6 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-              <Image
-                src={article.author.avatar}
-                alt={article.author.name}
-                fill
-                className="object-cover"
-                sizes="24px"
-              />
+            <div className="w-6 h-6 rounded-full bg-slate-900 border border-amber-600/70 flex items-center justify-center text-amber-500 shrink-0">
+              <Shield className="w-3.5 h-3.5 text-amber-500" />
             </div>
-            <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">{article.author.name}</span>
+            <span className="text-xs text-slate-700 dark:text-slate-300 font-semibold truncate max-w-[150px]">
+              {article.author?.name || 'Public Intel Desk'}
+            </span>
           </div>
 
           <Link

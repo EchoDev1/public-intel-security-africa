@@ -309,6 +309,8 @@ export default function AdminDashboardPage() {
     coverCaption: 'News photo: Public Intel Security Africa field lens.',
     videoUrl: '',
     videoCaption: '',
+    audioUrl: '',
+    audioCaption: '',
     isBreaking: false,
     isSpecialReport: false,
     region: 'West Africa',
@@ -316,10 +318,12 @@ export default function AdminDashboardPage() {
   });
   const [articlePhotoPreview, setArticlePhotoPreview] = useState(null);
   const [articleVideoPreview, setArticleVideoPreview] = useState(null);
+  const [articleAudioPreview, setArticleAudioPreview] = useState(null);
   const [publishingArticle, setPublishingArticle] = useState(false);
   const [editingArticle, setEditingArticle] = useState(null);
   const [editArticlePhotoPreview, setEditArticlePhotoPreview] = useState(null);
   const [editArticleVideoPreview, setEditArticleVideoPreview] = useState(null);
+  const [editArticleAudioPreview, setEditArticleAudioPreview] = useState(null);
 
   // -------------------------------------------------------------
   // 4. ANTI-FAKE-NEWS VERIFICATION: EYE WITNESS & COMMUNITY REPORTS
@@ -999,25 +1003,95 @@ export default function AdminDashboardPage() {
   };
 
   // -------------------------------------------------------------
-  // UNIFIED GALLERY PHOTO & VIDEO UPLOAD HANDLERS
+  // UNIFIED GALLERY PHOTO, VIDEO & AUDIO UPLOAD HANDLERS (PERSISTENT BASE64)
   // -------------------------------------------------------------
-  const handlePhotoUpload = (e, setPreview, setUrlField) => {
+  const compressImageFile = (file, maxWidth = 1280, maxHeight = 1280, quality = 0.85) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (readerEvent) => {
+        const img = new window.Image();
+        img.onload = () => {
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth || height > maxHeight) {
+            if (width > height) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const dataUrl = canvas.toDataURL('image/jpeg', quality);
+          resolve(dataUrl);
+        };
+        img.onerror = () => {
+          resolve(readerEvent.target.result);
+        };
+        img.src = readerEvent.target.result;
+      };
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handlePhotoUpload = async (e, setPreview, setUrlField) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setPreview(url);
-      if (setUrlField) setUrlField(url);
-      showToast(`Photo "${file.name}" loaded from gallery.`);
+      try {
+        const compressedDataUrl = await compressImageFile(file);
+        if (compressedDataUrl) {
+          setPreview(compressedDataUrl);
+          if (setUrlField) setUrlField(compressedDataUrl);
+          showToast(`Photo "${file.name}" compressed and ready for live publishing.`);
+        }
+      } catch (err) {
+        showToast('Error processing image file.');
+      }
     }
   };
 
   const handleVideoUpload = (e, setPreview, setUrlField) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setPreview(url);
-      if (setUrlField) setUrlField(url);
-      showToast(`Video "${file.name}" loaded from gallery.`);
+      if (file.size > 25 * 1024 * 1024) {
+        alert("Video file exceeds 25MB. For fast playback, please enter a YouTube, Vimeo, or CDN link.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target.result;
+        setPreview(dataUrl);
+        if (setUrlField) setUrlField(dataUrl);
+        showToast(`Video "${file.name}" loaded.`);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAudioUpload = (e, setPreview, setUrlField) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 15 * 1024 * 1024) {
+        alert("Audio file exceeds 15MB. Please upload an MP3 under 15MB or enter an audio URL.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target.result;
+        setPreview(dataUrl);
+        if (setUrlField) setUrlField(dataUrl);
+        showToast(`Audio briefing "${file.name}" attached successfully.`);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -1523,67 +1597,61 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
   }
 
   // -------------------------------------------------------------
-  // NAVIGATION MENU GROUPS
+  // NAVIGATION MENU GROUPS (EXECUTIVE HIERARCHY)
   // -------------------------------------------------------------
   const navSections = [
     {
-      group: 'MAIN DASHBOARD & INTELLIGENCE',
+      group: '1. NEWSROOM & PUBLISHING',
       items: [
-        { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
-        { id: 'articles', label: 'News Stories & Articles', icon: FileText, badge: articlesList.length },
-        { id: 'publish_article', label: '+ Write New Story', icon: Plus, highlight: true },
+        { id: 'publish_article', label: '+ Write & Publish Story', subtitle: 'Compose live news & field reports', icon: Plus, highlight: true },
+        { id: 'articles', label: 'Published News & Wire', subtitle: 'Manage, edit & delete stories', icon: FileText, badge: articlesList.length },
         { 
           id: 'threat_matrix_control', 
           label: 'Continental Security Threat Matrix', 
-          subtitle: 'Real-Time Regional Risk & Stability Index',
+          subtitle: 'Real-time regional risk & stability',
           icon: ShieldAlert, 
           badge: threatRadarList.length, 
           alert: true 
         },
+        { id: 'special_reports', label: 'Special Investigative Reports', subtitle: 'In-depth intelligence dossiers', icon: BookOpen, badge: specialReportsList.length },
       ]
     },
     {
-      group: 'HEADER, NEWSLETTER & FOOTER',
+      group: '2. FACT-CHECKING & CITIZEN WATCH',
       items: [
-        { id: 'header_section', label: 'Header & Breaking Alert', icon: SlidersHorizontal },
+        { id: 'eyewitness', label: 'Eye Witness Verification', subtitle: 'Review verified citizen alerts', icon: Eye, badge: eyewitnessReports.filter(r => r.verificationStatus === 'Pending Verification').length, alert: true },
+        { id: 'community', label: 'Community Early Warning', subtitle: 'Local security submissions', icon: Users, badge: communityReports.filter(r => r.verificationStatus === 'Pending Verification').length, alert: true },
+      ]
+    },
+    {
+      group: '3. BROADCAST & TRAINING ACADEMY',
+      items: [
+        { id: 'broadcast_media', label: 'TV & Radio Broadcasts', subtitle: '24/7 video and audio streams', icon: Tv, badge: tvChannels.length + radioChannels.length },
+        { id: 'webinars', label: 'Webinars & Masterclasses', subtitle: 'Scheduled virtual briefings', icon: Calendar, badge: webinars.length },
+        { id: 'training_academy', label: 'Defense Academy & Enlisters', subtitle: 'Student applications & courses', icon: Award, badge: enlistersList.filter(e => e.approvalStatus === 'Pending Review').length },
+      ]
+    },
+    {
+      group: '4. PLATFORM DESIGN & CONFIGURATION',
+      items: [
+        { id: 'header_section', label: 'Header & Breaking Alert Ticker', icon: SlidersHorizontal },
         { id: 'newsletter_section', label: 'Newsletter & Subscribers', icon: Mail, badge: subscribers.length },
-        { id: 'footer_section', label: 'Footer & Bureaus', icon: Layers },
+        { id: 'footer_section', label: 'Footer & Bureau Locations', icon: Layers },
+        { id: 'categories', label: '25 Official News Verticals', icon: Globe, badge: categoriesList.length },
         { id: 'social_media', label: 'Social Media Accounts', icon: Share2, badge: socialLinks.length },
-      ]
-    },
-    {
-      group: 'ANTI-FAKE-NEWS VERIFICATION',
-      items: [
-        { id: 'eyewitness', label: 'Eye Witness Verification', icon: Eye, badge: eyewitnessReports.filter(r => r.verificationStatus === 'Pending Verification').length, alert: true },
-        { id: 'community', label: 'Community Reports Review', icon: Users, badge: communityReports.filter(r => r.verificationStatus === 'Pending Verification').length, alert: true },
-      ]
-    },
-    {
-      group: 'MEDIA & EDUCATION',
-      items: [
-        { id: 'broadcast_media', label: 'Broadcast & Media (TV, Radio)', icon: Tv, badge: tvChannels.length + radioChannels.length },
-        { id: 'webinars', label: 'Webinars & Masterclasses', icon: Calendar, badge: webinars.length },
-        { id: 'training_academy', label: 'Training Academy & Enlisters', icon: Award, badge: enlistersList.filter(e => e.approvalStatus === 'Pending Review').length },
-      ]
-    },
-    {
-      group: 'SPECIALIZED DIVISIONS & FELLOWS',
-      items: [
+        { id: 'partnerships', label: 'Partnerships & Bureau Contacts', icon: PhoneCall, badge: partnerships.length + bureauContacts.length },
         { id: 'specialized_divisions', label: 'Specialized Divisions Directory', icon: Layers, badge: specializedDivisions.length },
-        { id: 'special_reports', label: 'Special Reports', icon: BookOpen, badge: specialReportsList.length },
-        { id: 'women_in_security', label: 'Women in Security', icon: Sparkles, badge: womenList.length },
-        { id: 'editorial_team', label: 'Editorial Board & Field Fellows', icon: Users, badge: editorialTeam.length },
-        { id: 'partnerships', label: 'Partnership & Contacts', icon: PhoneCall, badge: partnerships.length + bureauContacts.length },
+        { id: 'women_in_security', label: 'Women in Security Profiles', icon: Sparkles, badge: womenList.length },
+        { id: 'editorial_team', label: 'Editorial Board & Fellows', icon: Users, badge: editorialTeam.length },
       ]
     },
     {
-      group: 'OPERATIONS, BACKUP & SYSTEM',
+      group: '5. SYSTEM HEALTH & DIAGNOSTICS',
       items: [
-        { id: 'categories', label: '25 Official Verticals', icon: Globe, badge: categoriesList.length },
-        { id: 'custom_features', label: '+ Add New Custom Feature', icon: Plus },
-        { id: 'audit_logs', label: 'Security Audit & Activity Trail', icon: Clock, badge: auditLogs.length },
+        { id: 'overview', label: 'Executive Operations Overview', icon: LayoutDashboard },
+        { id: 'database', label: 'Diagnostics & Self-Healing Suite', subtitle: 'System integrity & live checks', icon: Wrench, alert: true },
         { id: 'data_backup', label: 'Newsroom Backup & Data Export', icon: Download },
-        { id: 'database', label: 'Diagnostics & Self-Healing', subtitle: 'Troubleshoot & Fix All System Errors', icon: Wrench, alert: true },
+        { id: 'audit_logs', label: 'Security Audit & Activity Trail', icon: Clock, badge: auditLogs.length },
       ]
     }
   ];
@@ -2023,14 +2091,23 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                       <div className="space-y-3">
                         {/* Thumbnail / Header */}
                         <div className="relative h-44 w-full bg-slate-900">
-                          {coverImg ? (
-                            <Image src={coverImg} alt={art.title || 'Story'} fill className="object-cover" sizes="320px" />
+                          {art.isRealUpload && coverImg ? (
+                            <Image src={coverImg} alt={art.title || 'Story'} fill unoptimized className="object-cover" sizes="320px" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-slate-600 font-bold">
-                              <FileText className="w-10 h-10" />
+                            <div className="w-full h-full bg-radial-[at_top_left] from-slate-900 to-black p-4 flex flex-col justify-between border-b border-amber-600/30 select-none">
+                              <span className="text-[9px] font-mono text-amber-400 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                                TACTICAL DISPATCH
+                              </span>
+                              <div className="text-center font-black font-mono text-xs uppercase text-white tracking-wider">
+                                PUBLIC INTEL NEWS INCOMING
+                              </div>
+                              <span className="text-[8px] font-mono text-slate-500">
+                                AWAITING LIVE TRANSMISSION
+                              </span>
                             </div>
                           )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none"></div>
                           
                           {/* Badges */}
                           <div className="absolute top-2 left-2 flex flex-wrap gap-1">
@@ -2223,6 +2300,8 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                   coverCaption: newArticle.coverCaption || 'Public Intel Security Africa field lens.',
                   videoUrl: articleVideoPreview || newArticle.videoUrl || '',
                   videoCaption: newArticle.videoCaption || '',
+                  audioUrl: articleAudioPreview || newArticle.audioUrl || '',
+                  audioCaption: newArticle.audioCaption || '',
                   region: newArticle.region || 'West Africa',
                   country: newArticle.country || 'Nigeria',
                   readTime: `${Math.max(3, Math.ceil(((newArticle.content || newArticle.excerpt || '').split(' ').length) / 180))} min read`,
@@ -2230,6 +2309,7 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                   isFeatured: true,
                   isBreaking: newArticle.isBreaking || false,
                   isSpecialReport: newArticle.isSpecialReport || false,
+                  isRealUpload: true,
                   views: 1,
                   keyTakeaways: [newArticle.excerpt]
                 };
@@ -2268,6 +2348,8 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                   coverCaption: 'News photo: Public Intel Security Africa field lens.',
                   videoUrl: '',
                   videoCaption: '',
+                  audioUrl: '',
+                  audioCaption: '',
                   isBreaking: false,
                   isSpecialReport: false,
                   region: 'West Africa',
@@ -2275,6 +2357,7 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                 });
                 setArticlePhotoPreview(null);
                 setArticleVideoPreview(null);
+                setArticleAudioPreview(null);
                 setActiveTab('articles');
               }}
               className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-6 text-xs"
@@ -2400,26 +2483,29 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                 />
               </div>
 
-              {/* Media Section: Photos & Videos */}
+              {/* Media Section: Photos, Videos & Audios */}
               <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-4">
                 <h4 className="font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
                   <ImageIcon className="w-4 h-4" />
-                  <span>Media, Cover Photos & Video Attachment</span>
+                  <span>Media Studio: Cover Photo, Video & Audio Briefing Attachment</span>
                 </h4>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Cover Photo */}
-                  <div className="space-y-2">
-                    <label className="font-bold text-slate-700 dark:text-slate-300">Cover Image URL / Gallery</label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* 1. Cover Photo */}
+                  <div className="space-y-2 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <label className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                      <ImageIcon className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Cover Photo (Image URL or File)</span>
+                    </label>
                     <input
                       type="text"
                       placeholder="https://images.unsplash.com/..."
                       value={newArticle.coverImage}
                       onChange={(e) => setNewArticle({ ...newArticle, coverImage: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-mono text-[11px]"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px]"
                     />
-                    <label className="cursor-pointer block py-2 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 text-center font-bold border border-amber-200 dark:border-amber-800">
-                      <span>📁 Choose Photo from Device Gallery</span>
+                    <label className="cursor-pointer block py-2 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 text-amber-900 dark:text-amber-200 text-center font-bold border border-amber-300 dark:border-amber-700 transition-colors">
+                      <span>📁 Choose Photo from Device</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -2428,24 +2514,35 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                       />
                     </label>
                     {articlePhotoPreview && (
-                      <div className="relative h-28 rounded-xl overflow-hidden border border-amber-400">
-                        <Image src={articlePhotoPreview} alt="Preview" fill className="object-cover" sizes="200px" />
+                      <div className="relative h-28 rounded-xl overflow-hidden border-2 border-amber-500">
+                        <img src={articlePhotoPreview} alt="Preview" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setArticlePhotoPreview(null)}
+                          className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white hover:bg-red-600 transition-colors"
+                          title="Remove photo"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
                       </div>
                     )}
                   </div>
 
-                  {/* Video Attachment */}
-                  <div className="space-y-2">
-                    <label className="font-bold text-slate-700 dark:text-slate-300">Video Embed URL (YouTube/MP4)</label>
+                  {/* 2. Video Attachment */}
+                  <div className="space-y-2 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <label className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                      <Video className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Video Dispatch (YouTube/MP4)</span>
+                    </label>
                     <input
                       type="text"
                       placeholder="https://youtube.com/watch?v=..."
                       value={newArticle.videoUrl}
                       onChange={(e) => setNewArticle({ ...newArticle, videoUrl: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-mono text-[11px]"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px]"
                     />
-                    <label className="cursor-pointer block py-2 px-3 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-200 text-center font-bold border border-blue-200 dark:border-blue-800">
-                      <span>🎥 Choose Video from Device Gallery</span>
+                    <label className="cursor-pointer block py-2 px-3 rounded-xl bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 text-blue-900 dark:text-blue-200 text-center font-bold border border-blue-300 dark:border-blue-700 transition-colors">
+                      <span>🎥 Choose Video from Device</span>
                       <input
                         type="file"
                         accept="video/*"
@@ -2454,8 +2551,55 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                       />
                     </label>
                     {articleVideoPreview && (
-                      <div className="h-28 rounded-xl overflow-hidden bg-black flex items-center justify-center">
+                      <div className="relative h-28 rounded-xl overflow-hidden bg-black flex items-center justify-center border border-blue-500">
                         <video src={articleVideoPreview} controls className="w-full h-full object-contain" />
+                        <button
+                          type="button"
+                          onClick={() => setArticleVideoPreview(null)}
+                          className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white hover:bg-red-600 transition-colors"
+                          title="Remove video"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 3. Audio Briefing Attachment */}
+                  <div className="space-y-2 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <label className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                      <Headphones className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Audio Briefing (MP3 / Stream)</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="https://publicintel.africa/audio/briefing.mp3"
+                      value={newArticle.audioUrl}
+                      onChange={(e) => setNewArticle({ ...newArticle, audioUrl: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px]"
+                    />
+                    <label className="cursor-pointer block py-2 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-900 dark:text-emerald-200 text-center font-bold border border-emerald-300 dark:border-emerald-700 transition-colors">
+                      <span>🎙️ Choose Audio from Device</span>
+                      <input
+                        type="file"
+                        accept="audio/*"
+                        className="hidden"
+                        onChange={(e) => handleAudioUpload(e, setArticleAudioPreview, null)}
+                      />
+                    </label>
+                    {articleAudioPreview && (
+                      <div className="p-2 rounded-xl bg-slate-950 border border-emerald-500 flex flex-col gap-1">
+                        <div className="flex items-center justify-between text-[10px] text-emerald-400 font-mono">
+                          <span>Attached Audio Preview</span>
+                          <button
+                            type="button"
+                            onClick={() => setArticleAudioPreview(null)}
+                            className="text-red-400 hover:text-red-300 font-bold"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <audio src={articleAudioPreview} controls className="w-full h-8" />
                       </div>
                     )}
                   </div>
@@ -6061,6 +6205,7 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                   ...editingArticle,
                   coverImage: editArticlePhotoPreview || editingArticle.coverImage,
                   videoUrl: editArticleVideoPreview || editingArticle.videoUrl,
+                  audioUrl: editArticleAudioPreview || editingArticle.audioUrl,
                   categoryName: CATEGORIES.find(c => c.slug === editingArticle.categorySlug)?.name || editingArticle.categoryName || 'National Security'
                 };
                 try {
@@ -6156,7 +6301,7 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
               </div>
 
               {/* Media URL and file upload */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <label className="font-bold text-slate-700 dark:text-slate-300">Cover Photo URL / File</label>
                   <input
@@ -6166,7 +6311,7 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                     className="w-full px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px]"
                   />
                   <label className="cursor-pointer block py-1.5 px-3 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-900 dark:text-amber-200 text-center font-bold border border-amber-200">
-                    <span>📁 Replace Photo from Gallery</span>
+                    <span>📁 Replace Photo</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -6177,7 +6322,7 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-700 dark:text-slate-300">Video Embed URL (Optional)</label>
+                  <label className="font-bold text-slate-700 dark:text-slate-300">Video Embed URL</label>
                   <input
                     type="text"
                     value={editingArticle.videoUrl || ''}
@@ -6185,12 +6330,31 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                     className="w-full px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px]"
                   />
                   <label className="cursor-pointer block py-1.5 px-3 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-900 dark:text-blue-200 text-center font-bold border border-blue-200">
-                    <span>🎥 Replace Video from Gallery</span>
+                    <span>🎥 Replace Video</span>
                     <input
                       type="file"
                       accept="video/*"
                       className="hidden"
                       onChange={(e) => handleVideoUpload(e, setEditArticleVideoPreview, null)}
+                    />
+                  </label>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">Audio Briefing URL</label>
+                  <input
+                    type="text"
+                    value={editingArticle.audioUrl || ''}
+                    onChange={(e) => setEditingArticle({ ...editingArticle, audioUrl: e.target.value })}
+                    className="w-full px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px]"
+                  />
+                  <label className="cursor-pointer block py-1.5 px-3 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-200 text-center font-bold border border-emerald-200">
+                    <span>🎙️ Replace Audio</span>
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      className="hidden"
+                      onChange={(e) => handleAudioUpload(e, setEditArticleAudioPreview, null)}
                     />
                   </label>
                 </div>

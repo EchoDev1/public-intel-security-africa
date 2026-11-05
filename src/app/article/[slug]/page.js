@@ -9,7 +9,9 @@ import {
   Calendar, 
   CheckCircle2, 
   ArrowLeft, 
-  Lock
+  Lock,
+  Play,
+  Headphones
 } from 'lucide-react';
 import { ARTICLES, getArticleBySlug } from '@/lib/data/articles';
 import { getLiveArticlesCollection } from '@/lib/articles/manager';
@@ -28,18 +30,24 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }) {
-    const { slug } = await params;
-  let article = getArticleBySlug(slug);
+  const { slug } = await params;
+  const decodedSlug = decodeURIComponent(String(slug || '')).trim().toLowerCase();
+  let article = getArticleBySlug(slug) || getArticleBySlug(decodedSlug);
   if (!article) {
     try {
       const liveList = await getLiveArticlesCollection();
-      article = liveList.find(a => a.slug === slug);
+      article = liveList.find(a => 
+        (a.slug && a.slug.toLowerCase() === decodedSlug) || 
+        (a.id && a.id.toLowerCase() === decodedSlug) ||
+        a.slug === slug ||
+        a.id === slug
+      );
     } catch (_) {}
   }
 
   if (!article) {
     return {
-      title: 'Article Not Found',
+      title: 'Article Not Found | Public Intel Security Africa',
       description: 'The requested security intelligence report does not exist.',
     };
   }
@@ -92,21 +100,30 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function ArticlePage({ params }) {
-    const { slug } = await params;
-  let article = getArticleBySlug(slug);
+  const { slug } = await params;
+  const decodedSlug = decodeURIComponent(String(slug || '')).trim().toLowerCase();
+  let article = getArticleBySlug(slug) || getArticleBySlug(decodedSlug);
   if (!article) {
     try {
       const liveList = await getLiveArticlesCollection();
-      article = liveList.find(a => a.slug === slug);
+      article = liveList.find(a => 
+        (a.slug && a.slug.toLowerCase() === decodedSlug) || 
+        (a.id && a.id.toLowerCase() === decodedSlug) ||
+        a.slug === slug ||
+        a.id === slug
+      );
     } catch (_) {}
-  }
-  if (!article) {
-    article = ARTICLES[0];
   }
 
   if (!article) {
     notFound();
   }
+
+  const isRealArticle = Boolean(
+    article.isRealUpload || 
+    (article.id && article.id.startsWith('art-real-')) ||
+    (article.id && !article.id.startsWith('art-00') && !article.id.startsWith('hero-rot-'))
+  );
 
   const relatedArticles = ARTICLES.filter((a) => a.id !== article.id).slice(0, 3);
 
@@ -232,21 +249,15 @@ export default async function ArticlePage({ params }) {
           </div>
         )}
 
-        {/* Metadata & Author Bar */}
+        {/* Metadata & Author Bar with Official Bureau Badge (No dummy photo) */}
         <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="relative w-12 h-12 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shrink-0">
-              <Image
-                src={article.author.avatar}
-                alt={article.author.name}
-                fill
-                className="object-cover"
-                sizes="48px"
-              />
+            <div className="w-12 h-12 rounded-full bg-slate-900 border-2 border-amber-600/70 flex items-center justify-center text-amber-500 shrink-0 shadow-sm">
+              <Shield className="w-6 h-6 text-amber-500" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">{article.author.name}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{article.author.role}</p>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">{article.author?.name || 'Public Intel Desk'}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{article.author?.role || 'Senior Intelligence Analyst'}</p>
             </div>
           </div>
 
@@ -264,24 +275,101 @@ export default async function ArticlePage({ params }) {
         </div>
       </header>
 
-      {/* Featured Cover Image */}
+      {/* Featured Cover Area: Real Photo or Incoming Tactical Card */}
       <div className="space-y-2">
-        <div className="relative aspect-[16/9] w-full rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 shadow-md">
-          <Image
-            src={article.coverImage}
-            alt={article.title}
-            fill
-            priority
-            className="object-cover"
-            sizes="(max-width: 1024px) 100vw, 960px"
-          />
-        </div>
+        {isRealArticle && article.coverImage ? (
+          <div className="relative aspect-[16/9] w-full rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 shadow-md">
+            <Image
+              src={article.coverImage}
+              alt={article.title}
+              fill
+              priority
+              unoptimized
+              className="object-cover"
+              sizes="(max-width: 1024px) 100vw, 960px"
+            />
+          </div>
+        ) : (
+          <div className="relative aspect-[16/9] w-full rounded-2xl overflow-hidden bg-radial-[at_top_left] from-slate-900 via-slate-950 to-black p-6 sm:p-12 flex flex-col justify-between border border-amber-600/40 shadow-xl select-none">
+            {/* Tactical Grid Background */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#eab3080c_1px,transparent_1px),linear-gradient(to_bottom,#eab3080c_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
+
+            <div className="relative z-10 flex items-center justify-between">
+              <span className="flex items-center gap-2 px-3 py-1 rounded-md text-xs font-mono tracking-widest text-amber-400 bg-amber-950/80 border border-amber-500/40">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                <span>PUBLIC INTEL SECURITY AFRICA // STRATEGIC WIRE</span>
+              </span>
+              <Shield className="w-6 h-6 text-amber-500/80" />
+            </div>
+
+            <div className="relative z-10 text-center py-8 sm:py-12 my-auto">
+              <div className="text-amber-400 font-mono text-xs sm:text-sm uppercase tracking-widest mb-2">
+                Official Declassified Intelligence Wire
+              </div>
+              <div className="text-2xl sm:text-4xl md:text-5xl font-black tracking-widest uppercase font-mono text-white drop-shadow-xl">
+                PUBLIC INTEL NEWS INCOMING
+              </div>
+              <p className="text-slate-400 text-xs sm:text-sm font-mono mt-3">
+                COMMUNICATION STATUS: AWAITING FIELD DISPATCH & TELEMETRY
+              </p>
+            </div>
+
+            <div className="relative z-10 flex items-center justify-between text-xs font-mono text-slate-400 border-t border-slate-800 pt-3">
+              <span>CLASSIFICATION: CONFIDENTIAL / STRATEGIC MEDIA</span>
+              <span className="text-amber-400 font-bold">PAN-AFRICAN SECURITY RADAR</span>
+            </div>
+          </div>
+        )}
         {article.coverCaption && (
           <p className="text-xs text-slate-500 dark:text-slate-400 italic px-2">
             {article.coverCaption}
           </p>
         )}
       </div>
+
+      {/* Video Dispatch Player (if video is provided) */}
+      {article.videoUrl && (
+        <div className="p-4 sm:p-6 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+          <div className="flex items-center justify-between text-xs text-white">
+            <span className="flex items-center gap-2 font-bold uppercase tracking-wider text-amber-400">
+              <Play className="w-4 h-4 fill-amber-400 text-amber-400" />
+              <span>Field Video Intelligence Dispatch</span>
+            </span>
+            {article.videoCaption && <span className="text-slate-400 text-xs italic">{article.videoCaption}</span>}
+          </div>
+          <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black border border-slate-800">
+            {article.videoUrl.includes('youtube.com') || article.videoUrl.includes('youtu.be') ? (
+              <iframe
+                src={article.videoUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                title="Video Dispatch"
+                className="w-full h-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              <video controls src={article.videoUrl} className="w-full h-full object-cover">
+                Your browser does not support the video tag.
+              </video>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Audio Briefing Player (if audio is provided) */}
+      {article.audioUrl && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-slate-950 border border-amber-500/40 space-y-2">
+          <div className="flex items-center justify-between text-xs text-white">
+            <span className="flex items-center gap-2 font-bold uppercase tracking-wider text-amber-400">
+              <Headphones className="w-4 h-4 text-amber-400" />
+              <span>Official Audio Briefing & Intercept</span>
+            </span>
+            <span className="text-[10px] font-mono text-slate-400">AUTHENTICATED DISPATCH</span>
+          </div>
+          <audio controls src={article.audioUrl} className="w-full h-10 rounded-lg accent-amber-500">
+            Your browser does not support audio playback.
+          </audio>
+        </div>
+      )}
 
       {/* Audio Narration & Actions Bar */}
       <AudioArticlePlayer title={article.title} readTime={article.readTime} />

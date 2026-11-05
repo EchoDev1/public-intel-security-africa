@@ -424,66 +424,120 @@ export default function HeroFeatured({ initialArticles = [] }) {
         <div className="lg:col-span-7 flex flex-col">
           <div className="group relative rounded-2xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-600 dark:hover:border-amber-500 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between h-full">
             
-            {/* Lead Image & Overlay */}
-            <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
-              <Image
-                src={activeStory.image}
-                alt={activeStory.title}
-                fill
-                priority
-                className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                sizes="(max-width: 1024px) 100vw, 58vw"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/35 to-transparent"></div>
+            {/* Lead Image & Overlay - Clickable */}
+            <Link 
+              href={`/article/${activeStory.slug}`}
+              className="block relative aspect-[16/10] sm:aspect-[16/9] w-full overflow-hidden bg-slate-950 cursor-pointer"
+            >
+              {activeStory.isRealUpload ? (
+                <>
+                  <Image
+                    src={activeStory.image}
+                    alt={activeStory.title}
+                    fill
+                    priority
+                    unoptimized
+                    className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                    sizes="(max-width: 1024px) 100vw, 58vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/35 to-transparent"></div>
 
-              {/* Badges Over Image */}
-              <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex flex-wrap items-center gap-2">
-                <span className="px-3 py-1 rounded-md bg-amber-600 text-white font-black text-[10px] sm:text-xs uppercase tracking-wider shadow-md flex items-center gap-1.5">
-                  <Flame className="w-3.5 h-3.5 text-amber-200" />
-                  <span>{activeStory.isRealUpload ? 'Official Bureau Lead Dossier' : 'Lead Investigative Dossier'}</span>
-                </span>
-                <span className="px-2.5 py-1 rounded-md bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-slate-900 dark:text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 shadow-sm">
-                  {activeStory.category}
-                </span>
-                <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono text-slate-300 bg-slate-950/80 border border-slate-800">
-                  {activeStory.featureSource}
-                </span>
-                {activeStory.isRealUpload && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-600/90 text-white border border-emerald-400 shadow-xs">
-                    <Sparkles className="w-2.5 h-2.5" />
-                    <span>LATEST POST</span>
-                  </span>
-                )}
-              </div>
+                  {/* Badges Over Image */}
+                  <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex flex-wrap items-center gap-2 z-10">
+                    <span className="px-3 py-1 rounded-md bg-amber-600 text-white font-black text-[10px] sm:text-xs uppercase tracking-wider shadow-md flex items-center gap-1.5">
+                      <Flame className="w-3.5 h-3.5 text-amber-200" />
+                      <span>Official Bureau Lead Dossier</span>
+                    </span>
+                    <span className="px-2.5 py-1 rounded-md bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-slate-900 dark:text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 shadow-sm">
+                      {activeStory.category}
+                    </span>
+                    <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono text-slate-300 bg-slate-950/80 border border-slate-800">
+                      {activeStory.featureSource}
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-600/90 text-white border border-emerald-400 shadow-xs">
+                      <Sparkles className="w-2.5 h-2.5" />
+                      <span>LATEST POST</span>
+                    </span>
+                  </div>
+
+                  {/* Meta Overlay */}
+                  <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 flex items-center justify-between text-xs sm:text-sm text-white z-10">
+                    <div className="flex items-center gap-2 sm:gap-4 truncate">
+                      <span className="flex items-center gap-1.5 font-semibold truncate">
+                        <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span className="truncate">{activeStory.location}</span>
+                      </span>
+                      <span className="text-slate-400 shrink-0">•</span>
+                      <span className="flex items-center gap-1.5 text-slate-300 shrink-0">
+                        <Clock className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                        <span>{activeStory.readTime}</span>
+                      </span>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded bg-amber-900/90 text-amber-200 border border-amber-600 text-[10px] sm:text-xs font-bold uppercase tracking-wider shrink-0 ml-2">
+                      {activeStory.threatLevel}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="w-full h-full bg-radial-[at_top_left] from-slate-900 via-slate-950 to-black p-5 sm:p-7 flex flex-col justify-between border-b border-amber-600/30 overflow-hidden select-none">
+                  {/* Tactical Grid Background */}
+                  <div className="absolute inset-0 bg-[linear-gradient(to_right,#eab3080c_1px,transparent_1px),linear-gradient(to_bottom,#eab3080c_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none"></div>
+
+                  {/* Badges Over Card */}
+                  <div className="relative z-10 flex flex-wrap items-center gap-2">
+                    <span className="px-3 py-1 rounded-md bg-amber-600 text-white font-black text-[10px] sm:text-xs uppercase tracking-wider shadow-md flex items-center gap-1.5">
+                      <Flame className="w-3.5 h-3.5 text-amber-200" />
+                      <span>Lead Investigative Dossier</span>
+                    </span>
+                    <span className="px-2.5 py-1 rounded-md bg-slate-900/90 text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider border border-slate-700 shadow-sm">
+                      {activeStory.category}
+                    </span>
+                  </div>
+
+                  {/* Centered Incoming Typography */}
+                  <div className="relative z-10 text-center py-6 sm:py-8 my-auto">
+                    <div className="text-amber-400 font-mono text-[10px] sm:text-xs uppercase tracking-widest mb-1.5 flex items-center justify-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                      <span>Official Bureau Intelligence Radar</span>
+                    </div>
+                    <div className="text-lg sm:text-2xl md:text-3xl font-black tracking-widest uppercase font-mono text-white group-hover:text-amber-400 transition-colors drop-shadow-lg">
+                      PUBLIC INTEL NEWS INCOMING
+                    </div>
+                    <p className="text-slate-400 text-[10px] sm:text-xs font-mono mt-1.5">
+                      SEC-DISPATCH // AWAITING REAL-TIME TRANSMISSION
+                    </p>
+                  </div>
+
+                  {/* Bottom Telemetry Bar */}
+                  <div className="relative z-10 flex items-center justify-between text-xs sm:text-sm text-white pt-2 border-t border-slate-800">
+                    <div className="flex items-center gap-2 sm:gap-4 truncate">
+                      <span className="flex items-center gap-1.5 font-semibold truncate">
+                        <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span className="truncate">{activeStory.location}</span>
+                      </span>
+                      <span className="text-slate-400 shrink-0">•</span>
+                      <span className="flex items-center gap-1.5 text-slate-300 shrink-0">
+                        <Clock className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                        <span>{activeStory.readTime}</span>
+                      </span>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded bg-amber-900/90 text-amber-200 border border-amber-600 text-[10px] sm:text-xs font-bold uppercase tracking-wider shrink-0 ml-2">
+                      {activeStory.threatLevel}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Bookmark Save Button */}
               <button
                 onClick={(e) => toggleSave(activeStory, e)}
-                className="absolute top-3 right-3 p-2 rounded-full bg-slate-900/80 hover:bg-amber-600 text-white backdrop-blur-md border border-slate-700 transition-colors shadow-sm"
+                className="absolute top-3 right-3 p-2 rounded-full bg-slate-900/80 hover:bg-amber-600 text-white backdrop-blur-md border border-slate-700 transition-colors shadow-sm z-20"
                 title={savedIds.includes(activeStory.id) || savedIds.includes(activeStory.slug) ? "Saved to Reading List" : "Save Story"}
                 aria-label="Save story"
               >
                 <Bookmark className={`w-3.5 h-3.5 ${savedIds.includes(activeStory.id) || savedIds.includes(activeStory.slug) ? "fill-amber-400 text-amber-400" : ""}`} />
               </button>
-
-              {/* Meta Overlay */}
-              <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 flex items-center justify-between text-xs sm:text-sm text-white">
-                <div className="flex items-center gap-2 sm:gap-4 truncate">
-                  <span className="flex items-center gap-1.5 font-semibold truncate">
-                    <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    <span className="truncate">{activeStory.location}</span>
-                  </span>
-                  <span className="text-slate-400 shrink-0">•</span>
-                  <span className="flex items-center gap-1.5 text-slate-300 shrink-0">
-                    <Clock className="w-3.5 h-3.5 text-slate-300 shrink-0" />
-                    <span>{activeStory.readTime}</span>
-                  </span>
-                </div>
-                <span className="px-2.5 py-0.5 rounded bg-amber-900/90 text-amber-200 border border-amber-600 text-[10px] sm:text-xs font-bold uppercase tracking-wider shrink-0 ml-2">
-                  {activeStory.threatLevel}
-                </span>
-              </div>
-            </div>
+            </Link>
 
             {/* Lead Story Body */}
             <div className="p-5 sm:p-7 flex-1 flex flex-col justify-between bg-white dark:bg-slate-900 transition-colors">
@@ -509,17 +563,11 @@ export default function HeroFeatured({ initialArticles = [] }) {
                 )}
               </div>
 
-              {/* Author & Read Dossier CTA */}
+              {/* Author & Read Dossier CTA with Official Bureau Badge (No dummy photo) */}
               <div className="pt-4 sm:pt-6 mt-4 sm:mt-6 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-                  <div className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-amber-600/50 shrink-0">
-                    <Image
-                      src={activeStory.author.avatar}
-                      alt={activeStory.author.name}
-                      fill
-                      className="object-cover"
-                      sizes="48px"
-                    />
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-900 border-2 border-amber-600/70 flex items-center justify-center text-amber-500 shrink-0 shadow-sm">
+                    <ShieldCheck className="w-5 h-5 text-amber-500" />
                   </div>
                   <div className="min-w-0">
                     <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
@@ -595,15 +643,25 @@ export default function HeroFeatured({ initialArticles = [] }) {
                   className="group p-2 sm:p-2.5 lg:p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-600 dark:hover:border-amber-500 transition-all flex gap-2.5 sm:gap-3 shadow-xs hover:shadow-md cursor-pointer"
                 >
                   {/* Photo Thumbnail */}
-                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-lg overflow-hidden shrink-0 bg-slate-900">
-                    <Image
-                      src={story.image}
-                      alt={story.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
-                      sizes="(max-width: 640px) 64px, (max-width: 1024px) 80px, 96px"
-                    />
-                    <span className="absolute bottom-0.5 left-0.5 sm:bottom-1 sm:left-1 px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded text-[7.5px] sm:text-[8px] font-bold uppercase tracking-wider bg-slate-900/90 text-amber-300">
+                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-lg overflow-hidden shrink-0 bg-slate-950 border border-slate-800 flex items-center justify-center">
+                    {story.isRealUpload ? (
+                      <Image
+                        src={story.image}
+                        alt={story.title}
+                        fill
+                        unoptimized
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                        sizes="(max-width: 640px) 64px, (max-width: 1024px) 80px, 96px"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-slate-950 p-1 flex flex-col items-center justify-center text-center">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse mb-0.5"></span>
+                        <span className="text-[6.5px] sm:text-[7.5px] font-black uppercase tracking-tight text-amber-300 font-mono leading-tight">
+                          PUBLIC INTEL<br/>NEWS INCOMING
+                        </span>
+                      </div>
+                    )}
+                    <span className="absolute bottom-0.5 left-0.5 sm:bottom-1 sm:left-1 px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded text-[7.5px] sm:text-[8px] font-bold uppercase tracking-wider bg-slate-900/90 text-amber-300 z-10">
                       {story.threatLevel}
                     </span>
                   </div>
