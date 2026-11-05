@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { 
@@ -13,13 +13,13 @@ import {
   ShieldCheck, 
   Bookmark, 
   ChevronLeft, 
-  ChevronRight 
+  ChevronRight,
+  Sparkles
 } from 'lucide-react';
-import { ARTICLES } from '@/lib/data/articles';
 import { useAuth } from '@/context/AuthContext';
 
-// Consolidated pool of top & trending stories across all platform features
-const TRENDING_HERO_STORIES = [
+// Default pool of seed stories across platform features (phased out as real articles are posted)
+const SEED_HERO_STORIES = [
   {
     id: 'hero-rot-001',
     slug: 'gulf-of-guinea-maritime-defense-architecture-2026',
@@ -39,7 +39,8 @@ const TRENDING_HERO_STORIES = [
       name: 'Capt. (Ret.) Tariq Adeleke',
       role: 'Senior Naval & Littoral Security Analyst',
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80'
-    }
+    },
+    isRealUpload: false
   },
   {
     id: 'hero-rot-002',
@@ -60,7 +61,8 @@ const TRENDING_HERO_STORIES = [
       name: 'Dr. Amina Touré',
       role: 'Director of Sahelian Security & Conflict Studies',
       avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80'
-    }
+    },
+    isRealUpload: false
   },
   {
     id: 'hero-rot-003',
@@ -81,7 +83,8 @@ const TRENDING_HERO_STORIES = [
       name: 'Farida Al-Mansoor',
       role: 'Chief Cyber Threat Intelligence Analyst',
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
-    }
+    },
+    isRealUpload: false
   },
   {
     id: 'hero-rot-004',
@@ -102,7 +105,8 @@ const TRENDING_HERO_STORIES = [
       name: 'Tsegaye Gebreselassie',
       role: 'Food & Agricultural Security Analyst',
       avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80'
-    }
+    },
+    isRealUpload: false
   },
   {
     id: 'hero-rot-005',
@@ -123,7 +127,8 @@ const TRENDING_HERO_STORIES = [
       name: 'Jerome Mukendi',
       role: 'Critical Resources Security Correspondent',
       avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80'
-    }
+    },
+    isRealUpload: false
   },
   {
     id: 'hero-rot-006',
@@ -144,7 +149,8 @@ const TRENDING_HERO_STORIES = [
       name: 'Dr. Kwesi Appiah',
       role: 'Electoral Integrity Lead',
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80'
-    }
+    },
+    isRealUpload: false
   },
   {
     id: 'hero-rot-007',
@@ -165,15 +171,152 @@ const TRENDING_HERO_STORIES = [
       name: 'Brig. Gen. (Ret.) Sarah Mwangi',
       role: 'Senior Advisor on Women, Peace & Security',
       avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80'
-    }
+    },
+    isRealUpload: false
   }
 ];
 
-export default function HeroFeatured() {
+function formatTimeAgo(isoString) {
+  if (!isoString) return 'Recent';
+  try {
+    const diffMs = Date.now() - new Date(isoString).getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 2) return 'Just now';
+    if (diffMins < 60) return `${diffMins} mins ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} hr${diffHours > 1 ? 's' : ''} ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    return new Date(isoString).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  } catch (_) {
+    return 'Recent';
+  }
+}
+
+function mapArticleToStory(art, index) {
+  const isReal = Boolean(
+    art.isRealUpload || 
+    (art.id && !art.id.startsWith('hero-rot-') && !art.id.startsWith('art-00'))
+  );
+
+  return {
+    id: art.id || `story-${art.slug || index}`,
+    slug: art.slug,
+    featureSource: art.featureSource || (art.isSpecialReport ? 'Special Investigative Dossier' : (art.isBreaking ? 'Breaking Intelligence Alert' : (art.categoryName || 'Strategic Intelligence Dossier'))),
+    title: art.title,
+    category: art.categoryName || art.category || 'National Security',
+    categorySlug: art.categorySlug || 'national-security',
+    location: art.location || (art.country && art.region ? `${art.country} / ${art.region}` : (art.country || art.region || 'Continental Africa')),
+    country: art.country || 'Continental Africa',
+    threatLevel: art.threatLevel || 'Elevated',
+    readTime: art.readTime || '5 min read',
+    timeAgo: art.timeAgo || formatTimeAgo(art.publishedAt),
+    image: art.coverImage || art.image || 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1200&q=80',
+    summary: art.excerpt || art.summary || '',
+    keyInsight: art.keyInsight || (Array.isArray(art.keyTakeaways) && art.keyTakeaways[0]) || art.subtitle || art.excerpt || '',
+    author: art.author || {
+      name: 'Lady Dakore Ekpendu',
+      role: 'Executive Director & Chief Editor',
+      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80'
+    },
+    isRealUpload: isReal
+  };
+}
+
+function buildHeroStories(articles, isDummyPurged) {
+  if (!Array.isArray(articles) || articles.length === 0) {
+    return isDummyPurged ? [] : SEED_HERO_STORIES;
+  }
+
+  // Separate real uploads vs dummy seed stories
+  const realArticles = articles.filter(a => 
+    a.isRealUpload || 
+    (a.id && !a.id.startsWith('hero-rot-') && !a.id.startsWith('art-00'))
+  );
+
+  const realStories = realArticles.map(mapArticleToStory);
+
+  if (isDummyPurged) {
+    // Admin permanently removed all dummy news: show strictly real articles
+    return realStories.length > 0 ? realStories : SEED_HERO_STORIES.slice(0, 1);
+  }
+
+  // Automatic phase-out: for each real article uploaded, 1 dummy story is phased out from the end
+  const remainingDummyCount = Math.max(0, SEED_HERO_STORIES.length - realStories.length);
+  const remainingDummies = SEED_HERO_STORIES.slice(0, remainingDummyCount);
+
+  // Real news/reports automatically take the top box spaces, pushing dummies to the very last
+  const combined = [...realStories, ...remainingDummies];
+  return combined.length > 0 ? combined : SEED_HERO_STORIES;
+}
+
+export default function HeroFeatured({ initialArticles = [] }) {
   const { user, isLoggedIn, openAuthModal } = useAuth();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [savedIds, setSavedIds] = useState([]);
+
+  // Live stories list state
+  const [stories, setStories] = useState(() => {
+    return buildHeroStories(initialArticles, false);
+  });
+
+  // Client-side real-time sync with server & broadcast events
+  const syncArticles = useCallback((newArticlesList, isPurged) => {
+    const updated = buildHeroStories(newArticlesList, isPurged);
+    if (updated.length > 0) {
+      setStories(updated);
+    }
+  }, []);
+
+  useEffect(() => {
+    // 1. Fetch live articles from API on mount
+    let isMounted = true;
+    fetch('/api/articles')
+      .then(res => res.json())
+      .then(data => {
+        if (!isMounted || !data?.articles) return;
+        const real = data.articles.filter(a => a.isRealUpload);
+        try {
+          localStorage.setItem('pisa_custom_articles', JSON.stringify(real));
+          localStorage.setItem('pisa_articles_meta', JSON.stringify({
+            isDummyPurged: Boolean(data.isDummyPurged),
+            deletedDummyIds: []
+          }));
+        } catch (_) {}
+        syncArticles(data.articles, Boolean(data.isDummyPurged));
+      })
+      .catch(() => {});
+
+    // 2. Listen to custom in-window update events
+    const handleUpdatedEvent = (e) => {
+      if (e?.detail?.articles) {
+        syncArticles(e.detail.articles, Boolean(e.detail.isDummyPurged));
+      }
+    };
+    window.addEventListener('pisa_articles_updated', handleUpdatedEvent);
+
+    // 3. Listen to cross-tab BroadcastChannel
+    let channel = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        channel = new BroadcastChannel('pisa_articles_channel');
+        channel.onmessage = (e) => {
+          if (e?.data?.articles) {
+            syncArticles(e.data.articles, Boolean(e.data.isDummyPurged));
+          }
+        };
+      }
+    } catch (_) {}
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('pisa_articles_updated', handleUpdatedEvent);
+      if (channel) {
+        try { channel.close(); } catch (_) {}
+      }
+    };
+  }, [syncArticles]);
 
   // Sync saved bookmarks with per-user localStorage
   useEffect(() => {
@@ -203,21 +346,23 @@ export default function HeroFeatured() {
 
   // Auto-rotate stories smoothly unless user hovers
   useEffect(() => {
-    if (!isAutoPlaying) return;
+    if (!isAutoPlaying || stories.length <= 1) return;
 
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % TRENDING_HERO_STORIES.length);
+      setCurrentIndex((prev) => (prev + 1) % stories.length);
     }, 8000);
 
     return () => clearInterval(interval);
-  }, [isAutoPlaying]);
+  }, [isAutoPlaying, stories.length]);
 
   const nextStory = () => {
-    setCurrentIndex((prev) => (prev + 1) % TRENDING_HERO_STORIES.length);
+    if (stories.length <= 1) return;
+    setCurrentIndex((prev) => (prev + 1) % stories.length);
   };
 
   const prevStory = () => {
-    setCurrentIndex((prev) => (prev - 1 + TRENDING_HERO_STORIES.length) % TRENDING_HERO_STORIES.length);
+    if (stories.length <= 1) return;
+    setCurrentIndex((prev) => (prev - 1 + stories.length) % stories.length);
   };
 
   const toggleSave = (story, e) => {
@@ -261,9 +406,10 @@ export default function HeroFeatured() {
     } catch (_) {}
   };
 
-  const activeStory = TRENDING_HERO_STORIES[currentIndex];
-  // 4 other trending stories in side queue
-  const sideQueue = TRENDING_HERO_STORIES.filter((_, idx) => idx !== currentIndex).slice(0, 4);
+  const safeIndex = currentIndex >= stories.length ? 0 : currentIndex;
+  const activeStory = stories[safeIndex] || stories[0] || SEED_HERO_STORIES[0];
+  // Up to 4 other trending stories in side queue
+  const sideQueue = stories.filter((_, idx) => idx !== safeIndex).slice(0, 4);
 
   return (
     <section 
@@ -294,7 +440,7 @@ export default function HeroFeatured() {
               <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex flex-wrap items-center gap-2">
                 <span className="px-3 py-1 rounded-md bg-amber-600 text-white font-black text-[10px] sm:text-xs uppercase tracking-wider shadow-md flex items-center gap-1.5">
                   <Flame className="w-3.5 h-3.5 text-amber-200" />
-                  <span>Lead Investigative Dossier</span>
+                  <span>{activeStory.isRealUpload ? 'Official Bureau Lead Dossier' : 'Lead Investigative Dossier'}</span>
                 </span>
                 <span className="px-2.5 py-1 rounded-md bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-slate-900 dark:text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 shadow-sm">
                   {activeStory.category}
@@ -302,6 +448,12 @@ export default function HeroFeatured() {
                 <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono text-slate-300 bg-slate-950/80 border border-slate-800">
                   {activeStory.featureSource}
                 </span>
+                {activeStory.isRealUpload && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-600/90 text-white border border-emerald-400 shadow-xs">
+                    <Sparkles className="w-2.5 h-2.5" />
+                    <span>LATEST POST</span>
+                  </span>
+                )}
               </div>
 
               {/* Bookmark Save Button */}
@@ -419,7 +571,7 @@ export default function HeroFeatured() {
               </button>
 
               <span className="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400 px-1">
-                {currentIndex + 1}/{TRENDING_HERO_STORIES.length}
+                {safeIndex + 1}/{stories.length}
               </span>
 
               <button
@@ -460,8 +612,11 @@ export default function HeroFeatured() {
                   <div className="flex-1 flex flex-col justify-between min-w-0">
                     <div>
                       <div className="flex items-center justify-between gap-1 text-[9.5px] sm:text-[10px] text-slate-500 dark:text-slate-400 mb-0.5">
-                        <span className="font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider truncate">
-                          {story.category}
+                        <span className="font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider truncate flex items-center gap-1">
+                          <span>{story.category}</span>
+                          {story.isRealUpload && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+                          )}
                         </span>
                         <span className="shrink-0 font-mono text-[9px] sm:text-[10px]">{story.timeAgo}</span>
                       </div>
@@ -496,12 +651,12 @@ export default function HeroFeatured() {
           <div className="flex items-center justify-between pt-1 px-1 text-[9.5px] sm:text-[10px] text-slate-500 dark:text-slate-400">
             <span className="font-mono">Auto-rotates • Click story to read</span>
             <div className="flex items-center gap-1.5">
-              {TRENDING_HERO_STORIES.map((_, idx) => (
+              {stories.map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentIndex(idx)}
                   className={`h-1.5 rounded-full transition-all ${
-                    idx === currentIndex 
+                    idx === safeIndex 
                       ? 'w-5 bg-amber-600' 
                       : 'w-1.5 bg-slate-300 dark:bg-slate-700 hover:bg-amber-400'
                   }`}

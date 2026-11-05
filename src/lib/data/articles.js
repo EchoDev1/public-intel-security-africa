@@ -1,4 +1,5 @@
 import { SEED_ARTICLES } from './articlesSeed';
+import { getInMemoryRealArticles, getArticlesMeta } from '../articles/manager';
 
 export { SEED_ARTICLES };
 
@@ -27,7 +28,7 @@ function getNodePath() {
 /**
  * Dynamically computes the active article collection:
  * - Real admin uploads are placed first.
- * - Each real upload automatically displaces/disappears 1 dummy article.
+ * - Each real upload automatically displaces/disappears 1 dummy article from the end.
  * - If dummy articles are purged, 0 dummy articles are returned.
  */
 export function computeArticles() {
@@ -36,30 +37,55 @@ export function computeArticles() {
     try {
       const fs = getNodeFs();
       const path = getNodePath();
+      let realArticles = [];
+      let meta = getArticlesMeta() || { isDummyPurged: false, deletedDummyIds: [] };
+
+      // 1. Check in-memory articles
+      try {
+        const inMemory = getInMemoryRealArticles();
+        if (Array.isArray(inMemory) && inMemory.length > 0) {
+          realArticles = [...inMemory];
+        }
+      } catch (_) {}
+
+      // 2. Check local file store
       if (fs && path) {
         const dataDir = path.join(process.cwd(), '.data');
         const articlesFile = path.join(dataDir, 'custom_articles.json');
         const metaFile = path.join(dataDir, 'articles_meta.json');
 
-        let realArticles = [];
-        let meta = { isDummyPurged: false, deletedDummyIds: [] };
+        if (fs.existsSync(metaFile)) {
+          try {
+            const fileMeta = JSON.parse(fs.readFileSync(metaFile, 'utf-8'));
+            meta = {
+              isDummyPurged: Boolean(fileMeta.isDummyPurged || meta.isDummyPurged),
+              deletedDummyIds: Array.from(new Set([...(fileMeta.deletedDummyIds || []), ...(meta.deletedDummyIds || [])]))
+            };
+          } catch (_) {}
+        }
 
-      if (fs.existsSync(metaFile)) {
-        meta = JSON.parse(fs.readFileSync(metaFile, 'utf-8'));
-      }
-      if (fs.existsSync(articlesFile)) {
-        realArticles = JSON.parse(fs.readFileSync(articlesFile, 'utf-8'));
+        if (fs.existsSync(articlesFile)) {
+          try {
+            const fileArticles = JSON.parse(fs.readFileSync(articlesFile, 'utf-8'));
+            if (Array.isArray(fileArticles) && fileArticles.length > 0) {
+              const map = new Map();
+              realArticles.forEach(a => map.set(a.id || a.slug, a));
+              fileArticles.forEach(a => map.set(a.id || a.slug, { ...a, isRealUpload: true }));
+              realArticles = Array.from(map.values());
+            }
+          } catch (_) {}
+        }
       }
 
       if (meta.isDummyPurged) {
         return realArticles;
       }
 
-        const availableDummy = SEED_ARTICLES.filter(a => !meta.deletedDummyIds?.includes(a.id));
-        // For each real article uploaded, 1 dummy article automatically disappears
-        const remainingDummy = availableDummy.slice(realArticles.length);
-        return [...realArticles, ...remainingDummy];
-      }
+      const deletedIds = Array.isArray(meta.deletedDummyIds) ? meta.deletedDummyIds : [];
+      const availableDummy = SEED_ARTICLES.filter(a => !deletedIds.includes(a.id));
+      // For each real article uploaded, 1 dummy article automatically disappears from the end
+      const remainingDummy = availableDummy.slice(realArticles.length);
+      return [...realArticles, ...remainingDummy];
     } catch (_) {}
   }
 
@@ -76,7 +102,8 @@ export function computeArticles() {
         return realArticles;
       }
 
-      const availableDummy = SEED_ARTICLES.filter(a => !meta.deletedDummyIds?.includes(a.id));
+      const deletedIds = Array.isArray(meta.deletedDummyIds) ? meta.deletedDummyIds : [];
+      const availableDummy = SEED_ARTICLES.filter(a => !deletedIds.includes(a.id));
       const remainingDummy = availableDummy.slice(realArticles.length);
       return [...realArticles, ...remainingDummy];
     } catch (_) {}
@@ -101,7 +128,10 @@ export const ARTICLES = new Proxy([], {
 });
 
 export function getArticleBySlug(slug) {
-  return computeArticles().find(art => art.slug === slug);
+  const all = computeArticles();
+  const found = all.find(art => art.slug === slug);
+  if (found) return found;
+  return SEED_ARTICLES.find(art => art.slug === slug);
 }
 
 export function getArticlesByCategory(categorySlug) {

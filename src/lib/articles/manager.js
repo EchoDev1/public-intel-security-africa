@@ -31,6 +31,18 @@ const DATA_DIR = path ? path.join(process.cwd(), '.data') : '';
 const ARTICLES_FILE = path ? path.join(DATA_DIR, 'custom_articles.json') : '';
 const META_FILE = path ? path.join(DATA_DIR, 'articles_meta.json') : '';
 
+// In-memory cache across serverless / Node lifecycle
+let memoryRealArticles = [];
+let memoryMeta = { isDummyPurged: false, deletedDummyIds: [] };
+
+function withTimeout(promise, ms = 2000) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error('Database timeout')), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 // Ensure local storage directory and files exist
 function ensureStorage() {
   if (!fs || !DATA_DIR) return;
@@ -53,21 +65,39 @@ function ensureStorage() {
 export function getArticlesMeta() {
   ensureStorage();
   try {
-    if (fs.existsSync(META_FILE)) {
-      return JSON.parse(fs.readFileSync(META_FILE, 'utf-8'));
+    if (fs && fs.existsSync(META_FILE)) {
+      const fileMeta = JSON.parse(fs.readFileSync(META_FILE, 'utf-8'));
+      memoryMeta = {
+        isDummyPurged: Boolean(fileMeta.isDummyPurged || memoryMeta.isDummyPurged),
+        deletedDummyIds: Array.from(new Set([...(fileMeta.deletedDummyIds || []), ...(memoryMeta.deletedDummyIds || [])]))
+      };
+      return memoryMeta;
     }
   } catch (_) {}
-  return { isDummyPurged: false, deletedDummyIds: [] };
+  return memoryMeta;
 }
 
 /**
  * Save Meta configuration
  */
 export function saveArticlesMeta(meta) {
+  memoryMeta = {
+    isDummyPurged: Boolean(meta.isDummyPurged),
+    deletedDummyIds: Array.isArray(meta.deletedDummyIds) ? meta.deletedDummyIds : []
+  };
   ensureStorage();
   try {
-    fs.writeFileSync(META_FILE, JSON.stringify(meta, null, 2));
+    if (fs && META_FILE) {
+      fs.writeFileSync(META_FILE, JSON.stringify(memoryMeta, null, 2));
+    }
   } catch (_) {}
+}
+
+/**
+ * Direct synchronous accessor for in-memory real articles
+ */
+export function getInMemoryRealArticles() {
+  return memoryRealArticles;
 }
 
 /**
@@ -77,59 +107,66 @@ export async function getRealArticles() {
   ensureStorage();
   let localArticles = [];
   try {
-    if (fs.existsSync(ARTICLES_FILE)) {
+    if (fs && fs.existsSync(ARTICLES_FILE)) {
       localArticles = JSON.parse(fs.readFileSync(ARTICLES_FILE, 'utf-8'));
     }
   } catch (_) {}
 
-  // Attempt Supabase fetch
+  // Merge local file store with in-memory store
+  const combinedMap = new Map();
+  memoryRealArticles.forEach(a => combinedMap.set(a.id || a.slug, { ...a, isRealUpload: true }));
+  localArticles.forEach(a => combinedMap.set(a.id || a.slug, { ...a, isRealUpload: true }));
+
+  // Attempt Supabase fetch with 2s timeout
   if (isSupabaseConfigured()) {
     try {
       const supabase = createServerSupabaseClient();
-      const { data, error } = await supabase.from('articles').select('*').order('published_at', { ascending: false });
+      const { data, error } = await withTimeout(
+        supabase.from('articles').select('*').order('published_at', { ascending: false }),
+        2000
+      );
       if (!error && Array.isArray(data) && data.length > 0) {
-        // Map Supabase schema columns to application article format
-        const supabaseArticles = data.map(item => ({
-          id: item.id,
-          slug: item.slug,
-          title: item.title,
-          subtitle: item.subtitle || '',
-          excerpt: item.excerpt,
-          content: item.content,
-          categorySlug: item.category_slug,
-          categoryName: item.category_name,
-          author: {
-            name: item.author_name || 'Lady Dakore Ekpendu',
-            role: item.author_role || 'Executive Director & Chief Editor',
-            avatar: item.author_avatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
-          },
-          coverImage: item.cover_image,
-          coverCaption: item.cover_caption || 'Public Intel Security Africa field lens.',
-          videoUrl: item.video_url || '',
-          videoCaption: item.video_caption || '',
-          threatLevel: item.threat_level || 'Guarded',
-          region: item.region || 'West Africa',
-          country: item.country || 'Nigeria',
-          readTime: item.read_time || '5 min read',
-          publishedAt: item.published_at,
-          isFeatured: item.is_featured || false,
-          isBreaking: item.is_breaking || false,
-          isSpecialReport: item.is_special_report || false,
-          views: item.views_count || 1,
-          isRealUpload: true,
-          keyTakeaways: Array.isArray(item.key_takeaways) ? item.key_takeaways : [item.excerpt]
-        }));
-
-        // Merge without duplicates (Supabase takes priority)
-        const map = new Map();
-        localArticles.forEach(a => map.set(a.id, { ...a, isRealUpload: true }));
-        supabaseArticles.forEach(a => map.set(a.id, { ...a, isRealUpload: true }));
-        return Array.from(map.values());
+        data.forEach(item => {
+          const mapped = {
+            id: item.id,
+            slug: item.slug,
+            title: item.title,
+            subtitle: item.subtitle || '',
+            excerpt: item.excerpt,
+            content: item.content,
+            categorySlug: item.category_slug,
+            categoryName: item.category_name,
+            author: {
+              name: item.author_name || 'Lady Dakore Ekpendu',
+              role: item.author_role || 'Executive Director & Chief Editor',
+              avatar: item.author_avatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
+            },
+            coverImage: item.cover_image,
+            coverCaption: item.cover_caption || 'Public Intel Security Africa field lens.',
+            videoUrl: item.video_url || '',
+            videoCaption: item.video_caption || '',
+            threatLevel: item.threat_level || 'Guarded',
+            region: item.region || 'West Africa',
+            country: item.country || 'Nigeria',
+            readTime: item.read_time || '5 min read',
+            publishedAt: item.published_at,
+            isFeatured: item.is_featured ?? true,
+            isBreaking: item.is_breaking || false,
+            isSpecialReport: item.is_special_report || false,
+            views: item.views_count || 1,
+            isRealUpload: true,
+            keyTakeaways: Array.isArray(item.key_takeaways) ? item.key_takeaways : [item.excerpt]
+          };
+          combinedMap.set(mapped.id || mapped.slug, mapped);
+        });
       }
-    } catch (_) {}
+    } catch (_) {
+      // Non-fatal, continue with local and memory store
+    }
   }
 
-  return localArticles.map(a => ({ ...a, isRealUpload: true }));
+  memoryRealArticles = Array.from(combinedMap.values()).map(a => ({ ...a, isRealUpload: true }));
+  return memoryRealArticles;
 }
 
 /**
@@ -144,47 +181,57 @@ export async function saveRealArticle(article) {
     isRealUpload: true
   };
 
-  // 1. Write to local file store
+  // 1. Update in-memory store
+  memoryRealArticles = [
+    realArticle,
+    ...memoryRealArticles.filter(a => a.id !== realArticle.id && a.slug !== realArticle.slug)
+  ];
+
+  // 2. Write to local file store
   try {
-    let list = [];
-    if (fs.existsSync(ARTICLES_FILE)) {
-      list = JSON.parse(fs.readFileSync(ARTICLES_FILE, 'utf-8'));
+    if (fs && ARTICLES_FILE) {
+      let list = [];
+      if (fs.existsSync(ARTICLES_FILE)) {
+        list = JSON.parse(fs.readFileSync(ARTICLES_FILE, 'utf-8'));
+      }
+      list = [realArticle, ...list.filter(a => a.id !== realArticle.id && a.slug !== realArticle.slug)];
+      fs.writeFileSync(ARTICLES_FILE, JSON.stringify(list, null, 2));
     }
-    // Prepend new article at the top
-    list = [realArticle, ...list.filter(a => a.id !== realArticle.id && a.slug !== realArticle.slug)];
-    fs.writeFileSync(ARTICLES_FILE, JSON.stringify(list, null, 2));
   } catch (_) {}
 
-  // 2. Persist to Supabase if configured
+  // 3. Persist to Supabase with timeout if configured
   if (isSupabaseConfigured()) {
     try {
       const supabase = createServerSupabaseClient();
-      await supabase.from('articles').upsert({
-        slug: realArticle.slug,
-        title: realArticle.title,
-        subtitle: realArticle.subtitle || '',
-        excerpt: realArticle.excerpt,
-        content: realArticle.content,
-        category_slug: realArticle.categorySlug,
-        category_name: realArticle.categoryName,
-        author_name: realArticle.author?.name || 'Lady Dakore Ekpendu',
-        author_role: realArticle.author?.role || 'Executive Director & Chief Editor',
-        author_avatar: realArticle.author?.avatar,
-        cover_image: realArticle.coverImage,
-        cover_caption: realArticle.coverCaption,
-        video_url: realArticle.videoUrl,
-        video_caption: realArticle.videoCaption,
-        threat_level: realArticle.threatLevel || 'Guarded',
-        region: realArticle.region || 'West Africa',
-        country: realArticle.country || 'Nigeria',
-        read_time: realArticle.readTime || '5 min read',
-        is_breaking: realArticle.isBreaking || false,
-        is_featured: realArticle.isFeatured || false,
-        is_special_report: realArticle.isSpecialReport || false,
-        published_at: realArticle.publishedAt
-      }, { onConflict: 'slug' });
+      await withTimeout(
+        supabase.from('articles').upsert({
+          slug: realArticle.slug,
+          title: realArticle.title,
+          subtitle: realArticle.subtitle || '',
+          excerpt: realArticle.excerpt,
+          content: realArticle.content,
+          category_slug: realArticle.categorySlug,
+          category_name: realArticle.categoryName,
+          author_name: realArticle.author?.name || 'Lady Dakore Ekpendu',
+          author_role: realArticle.author?.role || 'Executive Director & Chief Editor',
+          author_avatar: realArticle.author?.avatar,
+          cover_image: realArticle.coverImage,
+          cover_caption: realArticle.coverCaption,
+          video_url: realArticle.videoUrl,
+          video_caption: realArticle.videoCaption,
+          threat_level: realArticle.threatLevel || 'Guarded',
+          region: realArticle.region || 'West Africa',
+          country: realArticle.country || 'Nigeria',
+          read_time: realArticle.readTime || '5 min read',
+          is_breaking: realArticle.isBreaking || false,
+          is_featured: realArticle.isFeatured ?? true,
+          is_special_report: realArticle.isSpecialReport || false,
+          published_at: realArticle.publishedAt
+        }, { onConflict: 'slug' }),
+        2500
+      );
     } catch (err) {
-      console.warn('Supabase article sync notice:', err.message);
+      console.warn('Supabase article sync notice:', err?.message || err);
     }
   }
 
@@ -207,20 +254,29 @@ export async function deleteArticle(articleId) {
       saveArticlesMeta(meta);
     }
   } else {
+    // Delete from in-memory cache
+    memoryRealArticles = memoryRealArticles.filter(a => a.id !== articleId && a.slug !== articleId);
+
     // Delete from local file
     try {
-      if (fs.existsSync(ARTICLES_FILE)) {
+      if (fs && fs.existsSync(ARTICLES_FILE)) {
         let list = JSON.parse(fs.readFileSync(ARTICLES_FILE, 'utf-8'));
-        list = list.filter(a => a.id !== articleId);
+        list = list.filter(a => a.id !== articleId && a.slug !== articleId);
         fs.writeFileSync(ARTICLES_FILE, JSON.stringify(list, null, 2));
       }
     } catch (_) {}
 
-    // Delete from Supabase
+    // Delete from Supabase with timeout
     if (isSupabaseConfigured()) {
       try {
         const supabase = createServerSupabaseClient();
-        await supabase.from('articles').delete().eq('id', articleId);
+        await withTimeout(
+          Promise.all([
+            supabase.from('articles').delete().eq('id', articleId),
+            supabase.from('articles').delete().eq('slug', articleId)
+          ]),
+          2000
+        );
       } catch (_) {}
     }
   }
@@ -235,25 +291,26 @@ export async function purgeAllDummyArticles() {
   const meta = getArticlesMeta();
   meta.isDummyPurged = true;
   saveArticlesMeta(meta);
-  return { success: true, message: 'All dummy seed articles have been removed.' };
+  return { success: true, message: 'All dummy seed articles have been removed permanently.' };
 }
 
 /**
  * Calculate dynamic live article collection:
  * - Real articles appear at the top.
- * - For each real article uploaded, 1 dummy article automatically disappears.
+ * - For each real article uploaded, 1 dummy article automatically disappears from the end.
  * - If dummy articles are purged, 0 dummy articles remain.
  */
 export async function getLiveArticlesCollection() {
   const meta = getArticlesMeta();
   const realArticles = await getRealArticles();
 
-  if (meta.isDummyPurged) {
+  if (meta?.isDummyPurged) {
     return realArticles;
   }
 
+  const deletedIds = Array.isArray(meta?.deletedDummyIds) ? meta.deletedDummyIds : [];
   // Filter deleted dummy articles
-  const availableDummy = SEED_ARTICLES.filter(art => !meta.deletedDummyIds.includes(art.id));
+  const availableDummy = SEED_ARTICLES.filter(art => !deletedIds.includes(art.id));
 
   // Automatic phase-out: for each real article uploaded, remove a dummy article from the end
   const realCount = realArticles.length;

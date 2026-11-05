@@ -16,7 +16,7 @@ import {
   Radio, 
   Play, 
   Pause 
-import { ARTICLES } from '@/lib/data/articles';
+} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 // Consolidated pool of top & trending stories from all features across the platform

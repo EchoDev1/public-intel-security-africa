@@ -9,6 +9,10 @@ import ArticleCard from '@/components/ArticleCard';
 import JsonLd from '@/components/seo/JsonLd';
 import { SITE_CONFIG } from '@/lib/config/site';
 
+export const dynamic = 'force-dynamic';
+export const dynamicParams = true;
+export const revalidate = 0;
+
 export function generateStaticParams() {
   return CATEGORIES.map((c) => ({ category: c.slug }));
 }

@@ -15,12 +15,19 @@ import WomenInSecuritySpotlight from '@/components/WomenInSecuritySpotlight';
 import TrainingAcademySection from '@/components/TrainingAcademySection';
 import EconomicSecuritySection from '@/components/EconomicSecuritySection';
 import NewsletterSection from '@/components/NewsletterSection';
-import { ARTICLES, getSpecialReports } from '@/lib/data/articles';
+import { getLiveArticlesCollection } from '@/lib/articles/manager';
 import JsonLd from '@/components/seo/JsonLd';
 import { SITE_CONFIG } from '@/lib/config/site';
 
-export default function HomePage() {
-  const specialReports = getSpecialReports();
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+export default async function HomePage() {
+  const articles = await getLiveArticlesCollection();
+  let specialReports = articles.filter(art => art.isSpecialReport);
+  if (!specialReports || specialReports.length === 0) {
+    specialReports = articles.slice(0, 3);
+  }
 
   const homeBreadcrumbSchema = {
     '@context': 'https://schema.org',
@@ -52,8 +59,8 @@ export default function HomePage() {
       <JsonLd data={homeBreadcrumbSchema} />
       <JsonLd data={homeFeaturedListSchema} />
       
-      {/* 1. Hero Featured Section (Current Hero Page + Trending in All Features side-by-side) */}
-      <HeroFeatured />
+      {/* 1. Hero Featured Section (Top News Box - Real news automatically replaces/leads over dummies) */}
+      <HeroFeatured initialArticles={articles} />
 
       {/* 2. Special Reports & Strategic Investigations Grid (Immediately after Hero) */}
       <section className="max-w-7xl mx-auto px-4">
@@ -89,7 +96,7 @@ export default function HomePage() {
       </section>
 
       {/* 3. World News & Global Geopolitics (Clean 3-Card Grid Immediately after Special Reports) */}
-      <WorldNewsSection />
+      <WorldNewsSection initialArticles={articles} />
 
       {/* 4. Continental Security Threat Matrix (Situational Awareness Widget) */}
       <ThreatRadarWidget />
@@ -142,7 +149,7 @@ export default function HomePage() {
       <TrainingAcademySection />
 
       {/* 10. Economic & Financial Security Sector Desk */}
-      <EconomicSecuritySection />
+      <EconomicSecuritySection initialArticles={articles} />
 
       {/* 11. Daily Intelligence Briefing Newsletter */}
       <NewsletterSection />

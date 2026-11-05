@@ -1,13 +1,54 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Globe2, ArrowRight } from 'lucide-react';
 import ArticleCard from '@/components/ArticleCard';
 import { getWorldNewsArticles } from '@/lib/data/articles';
 
-export default function WorldNewsSection() {
-  const worldArticles = getWorldNewsArticles();
+export default function WorldNewsSection({ initialArticles = [] }) {
+  const [worldArticles, setWorldArticles] = useState(() => {
+    if (Array.isArray(initialArticles) && initialArticles.length > 0) {
+      const filtered = initialArticles.filter(art => art.categorySlug === 'world-news');
+      if (filtered.length > 0) return filtered;
+    }
+    return getWorldNewsArticles();
+  });
+
+  useEffect(() => {
+    const handleUpdate = (e) => {
+      if (e?.detail?.articles) {
+        const filtered = e.detail.articles.filter(art => art.categorySlug === 'world-news');
+        if (filtered.length > 0) {
+          setWorldArticles(filtered);
+        }
+      }
+    };
+
+    window.addEventListener('pisa_articles_updated', handleUpdate);
+
+    let channel = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        channel = new BroadcastChannel('pisa_articles_channel');
+        channel.onmessage = (e) => {
+          if (e?.data?.articles) {
+            const filtered = e.data.articles.filter(art => art.categorySlug === 'world-news');
+            if (filtered.length > 0) {
+              setWorldArticles(filtered);
+            }
+          }
+        };
+      }
+    } catch (_) {}
+
+    return () => {
+      window.removeEventListener('pisa_articles_updated', handleUpdate);
+      if (channel) {
+        try { channel.close(); } catch (_) {}
+      }
+    };
+  }, []);
 
   return (
     <section className="max-w-7xl mx-auto px-4">

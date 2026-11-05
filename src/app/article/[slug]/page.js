@@ -12,6 +12,11 @@ import {
   Lock
 } from 'lucide-react';
 import { ARTICLES, getArticleBySlug } from '@/lib/data/articles';
+import { getLiveArticlesCollection } from '@/lib/articles/manager';
+
+export const dynamic = 'force-dynamic';
+export const dynamicParams = true;
+export const revalidate = 0;
 import ArticleCard from '@/components/ArticleCard';
 import AudioArticlePlayer from './AudioArticlePlayer';
 import ArticleActions from './ArticleActions';
@@ -23,8 +28,14 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }) {
-  const { slug } = await params;
-  const article = getArticleBySlug(slug);
+    const { slug } = await params;
+  let article = getArticleBySlug(slug);
+  if (!article) {
+    try {
+      const liveList = await getLiveArticlesCollection();
+      article = liveList.find(a => a.slug === slug);
+    } catch (_) {}
+  }
 
   if (!article) {
     return {
@@ -81,8 +92,17 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function ArticlePage({ params }) {
-  const { slug } = await params;
-  const article = getArticleBySlug(slug) || ARTICLES[0];
+    const { slug } = await params;
+  let article = getArticleBySlug(slug);
+  if (!article) {
+    try {
+      const liveList = await getLiveArticlesCollection();
+      article = liveList.find(a => a.slug === slug);
+    } catch (_) {}
+  }
+  if (!article) {
+    article = ARTICLES[0];
+  }
 
   if (!article) {
     notFound();

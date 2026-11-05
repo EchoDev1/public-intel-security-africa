@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { 
   getLiveArticlesCollection, 
   saveRealArticle, 
@@ -7,6 +8,21 @@ import {
   getArticlesMeta,
   getRealArticles 
 } from '@/lib/articles/manager';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+function revalidateAllArticlePaths() {
+  try {
+    revalidatePath('/', 'layout');
+    revalidatePath('/');
+    revalidatePath('/special-reports');
+    revalidatePath('/world-news');
+    revalidatePath('/coverage/[category]', 'page');
+    revalidatePath('/article/[slug]', 'page');
+    revalidatePath('/dashboard');
+  } catch (_) {}
+}
 
 export async function GET() {
   try {
@@ -18,13 +34,17 @@ export async function GET() {
       success: true,
       articles,
       realCount: realArticles.length,
-      dummyCount: meta.isDummyPurged ? 0 : Math.max(0, articles.length - realArticles.length),
-      isDummyPurged: meta.isDummyPurged
+      dummyCount: meta?.isDummyPurged ? 0 : Math.max(0, articles.length - realArticles.length),
+      isDummyPurged: Boolean(meta?.isDummyPurged)
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
+      }
     });
   } catch (error) {
     console.error('Error fetching articles:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch articles' },
+      { error: error?.message || 'Failed to fetch articles' },
       { status: 500 }
     );
   }
@@ -42,16 +62,28 @@ export async function POST(request) {
     }
 
     const saved = await saveRealArticle(body);
+    revalidateAllArticlePaths();
+
+    const articles = await getLiveArticlesCollection();
+    const realArticles = await getRealArticles();
+    const meta = getArticlesMeta();
 
     return NextResponse.json({
       success: true,
       article: saved,
+      articles,
+      realCount: realArticles.length,
+      isDummyPurged: Boolean(meta?.isDummyPurged),
       message: `Article "${saved.title}" published live.`
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
+      }
     });
   } catch (error) {
     console.error('Error saving article:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to save article' },
+      { error: error?.message || 'Failed to save article' },
       { status: 500 }
     );
   }
@@ -65,13 +97,28 @@ export async function DELETE(request) {
 
     if (action === 'purge_dummy') {
       const res = await purgeAllDummyArticles();
-      return NextResponse.json(res);
+      revalidateAllArticlePaths();
+      const articles = await getLiveArticlesCollection();
+      const realArticles = await getRealArticles();
+      return NextResponse.json({
+        ...res,
+        articles,
+        realCount: realArticles.length,
+        isDummyPurged: true
+      });
     }
 
     if (id) {
       const res = await deleteArticle(id);
+      revalidateAllArticlePaths();
+      const articles = await getLiveArticlesCollection();
+      const realArticles = await getRealArticles();
+      const meta = getArticlesMeta();
       return NextResponse.json({
         success: true,
+        articles,
+        realCount: realArticles.length,
+        isDummyPurged: Boolean(meta?.isDummyPurged),
         message: `Article ${id} deleted successfully.`
       });
     }
@@ -83,7 +130,7 @@ export async function DELETE(request) {
   } catch (error) {
     console.error('Error deleting article:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to delete article' },
+      { error: error?.message || 'Failed to delete article' },
       { status: 500 }
     );
   }

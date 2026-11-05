@@ -1,13 +1,54 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { TrendingUp, ArrowRight, Landmark } from 'lucide-react';
 import ArticleCard from '@/components/ArticleCard';
 import { getEconomicSecurityArticles } from '@/lib/data/articles';
 
-export default function EconomicSecuritySection() {
-  const economicArticles = getEconomicSecurityArticles();
+export default function EconomicSecuritySection({ initialArticles = [] }) {
+  const [economicArticles, setEconomicArticles] = useState(() => {
+    if (Array.isArray(initialArticles) && initialArticles.length > 0) {
+      const filtered = initialArticles.filter(art => art.categorySlug === 'economic-and-financial-security');
+      if (filtered.length > 0) return filtered;
+    }
+    return getEconomicSecurityArticles();
+  });
+
+  useEffect(() => {
+    const handleUpdate = (e) => {
+      if (e?.detail?.articles) {
+        const filtered = e.detail.articles.filter(art => art.categorySlug === 'economic-and-financial-security');
+        if (filtered.length > 0) {
+          setEconomicArticles(filtered);
+        }
+      }
+    };
+
+    window.addEventListener('pisa_articles_updated', handleUpdate);
+
+    let channel = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        channel = new BroadcastChannel('pisa_articles_channel');
+        channel.onmessage = (e) => {
+          if (e?.data?.articles) {
+            const filtered = e.data.articles.filter(art => art.categorySlug === 'economic-and-financial-security');
+            if (filtered.length > 0) {
+              setEconomicArticles(filtered);
+            }
+          }
+        };
+      }
+    } catch (_) {}
+
+    return () => {
+      window.removeEventListener('pisa_articles_updated', handleUpdate);
+      if (channel) {
+        try { channel.close(); } catch (_) {}
+      }
+    };
+  }, []);
 
   return (
     <section className="max-w-7xl mx-auto px-4">

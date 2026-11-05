@@ -169,12 +169,30 @@ export default function AdminDashboardPage() {
 
   const fetchLiveArticles = async () => {
     try {
-      const res = await fetch('/api/articles');
+      const res = await fetch('/api/articles', { cache: 'no-store' });
       const data = await res.json();
       if (data?.articles) {
         setArticlesList(data.articles);
         setRealArticlesCount(data.realCount || 0);
         setIsDummyPurged(Boolean(data.isDummyPurged));
+
+        // Sync with client-side localStorage and broadcast across open tabs & windows
+        try {
+          const realOnly = data.articles.filter(a => a.isRealUpload);
+          localStorage.setItem('pisa_custom_articles', JSON.stringify(realOnly));
+          localStorage.setItem('pisa_articles_meta', JSON.stringify({
+            isDummyPurged: Boolean(data.isDummyPurged),
+            deletedDummyIds: []
+          }));
+          window.dispatchEvent(new CustomEvent('pisa_articles_updated', {
+            detail: { articles: data.articles, isDummyPurged: Boolean(data.isDummyPurged) }
+          }));
+          if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+            const bc = new BroadcastChannel('pisa_articles_channel');
+            bc.postMessage({ articles: data.articles, isDummyPurged: Boolean(data.isDummyPurged) });
+            bc.close();
+          }
+        } catch (_) {}
       }
     } catch (_) {}
   };
@@ -2071,9 +2089,19 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
 
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => {
-                                setArticlesList(articlesList.map(a => a.id === art.id ? { ...a, isTrending: !a.isTrending } : a));
-                                showToast(`Story "${art.title.slice(0, 25)}..." ${art.isTrending ? 'removed from Trending' : 'promoted to Trending'}.`);
+                              onClick={async () => {
+                                const nextVal = !art.isTrending;
+                                const updated = { ...art, isTrending: nextVal };
+                                setArticlesList(articlesList.map(a => a.id === art.id ? updated : a));
+                                showToast(`Story "${art.title.slice(0, 25)}..." ${nextVal ? 'promoted to Trending' : 'removed from Trending'}.`);
+                                try {
+                                  await fetch('/api/articles', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(updated)
+                                  });
+                                  fetchLiveArticles();
+                                } catch (_) {}
                               }}
                               className={`px-2 py-1 rounded text-[10px] font-bold border transition-colors flex items-center gap-1 ${
                                 art.isTrending 
@@ -2087,9 +2115,19 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                             </button>
 
                             <button
-                              onClick={() => {
-                                setArticlesList(articlesList.map(a => a.id === art.id ? { ...a, isBreaking: !a.isBreaking } : a));
+                              onClick={async () => {
+                                const nextVal = !art.isBreaking;
+                                const updated = { ...art, isBreaking: nextVal };
+                                setArticlesList(articlesList.map(a => a.id === art.id ? updated : a));
                                 showToast(`Breaking alert for "${art.title.slice(0, 25)}..." toggled.`);
+                                try {
+                                  await fetch('/api/articles', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(updated)
+                                  });
+                                  fetchLiveArticles();
+                                } catch (_) {}
                               }}
                               className={`px-2 py-1 rounded text-[10px] font-bold border transition-colors ${
                                 art.isBreaking 
@@ -6017,15 +6055,32 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
-                setArticlesList(articlesList.map(a => a.id === editingArticle.id ? {
+                const updated = {
                   ...editingArticle,
                   coverImage: editArticlePhotoPreview || editingArticle.coverImage,
                   videoUrl: editArticleVideoPreview || editingArticle.videoUrl,
                   categoryName: CATEGORIES.find(c => c.slug === editingArticle.categorySlug)?.name || editingArticle.categoryName || 'National Security'
-                } : a));
-                showToast(`Article "${editingArticle.title}" updated successfully!`);
+                };
+                try {
+                  const res = await fetch('/api/articles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updated)
+                  });
+                  const data = await res.json();
+                  if (data?.success) {
+                    showToast(`Article "${updated.title}" updated live!`);
+                    fetchLiveArticles();
+                  } else {
+                    setArticlesList(articlesList.map(a => a.id === updated.id ? updated : a));
+                    showToast(`Article updated.`);
+                  }
+                } catch (_) {
+                  setArticlesList(articlesList.map(a => a.id === updated.id ? updated : a));
+                  showToast(`Article updated.`);
+                }
                 setEditingArticle(null);
               }}
               className="space-y-4 text-xs"
