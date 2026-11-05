@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { 
   Radio as RadioIcon, 
   Tv, 
@@ -96,37 +95,42 @@ export default function MultimediaSection() {
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-in fade-in duration-300">
             <div className="lg:col-span-8 bg-white dark:bg-slate-850 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-md">
               <div className="relative aspect-video w-full bg-slate-900 group">
-                <Image
-                  src={TELEVISION_SHOWS[0].thumbnail}
-                  alt={TELEVISION_SHOWS[0].title}
-                  fill
-                  className="object-cover opacity-90 group-hover:opacity-100 transition-opacity"
-                  sizes="(max-width: 1024px) 100vw, 66vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                <div className="w-full h-full bg-radial-[at_top_left] from-slate-900 via-slate-950 to-black p-6 sm:p-8 flex flex-col justify-between border-b border-amber-600/30 overflow-hidden select-none">
+                  <div className="absolute inset-0 bg-[linear-gradient(to_right,#eab3080c_1px,transparent_1px),linear-gradient(to_bottom,#eab3080c_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none"></div>
+                  
+                  <div className="relative z-10 flex items-center justify-between">
+                    <span className="px-3 py-1 rounded bg-red-600 text-white font-bold text-xs uppercase tracking-widest flex items-center gap-1.5 shadow-md">
+                      <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                      PI-TV SATELLITE FEED
+                    </span>
+                    <span className="px-3 py-1 rounded bg-black/70 backdrop-blur-md text-white font-mono text-xs border border-white/10">
+                      1080P HD BROADCAST
+                    </span>
+                  </div>
 
-                <div className="absolute top-4 left-4 flex items-center gap-2">
-                  <span className="px-3 py-1 rounded bg-red-600 text-white font-bold text-xs uppercase tracking-widest flex items-center gap-1.5 shadow-md animate-pulse">
-                    <span className="w-2 h-2 rounded-full bg-white"></span>
-                    PI-TV LIVE
-                  </span>
-                  <span className="px-3 py-1 rounded bg-black/70 backdrop-blur-md text-white font-semibold text-xs border border-white/10">
-                    HD 1080p Broadcast
-                  </span>
+                  <div className="relative z-10 text-center py-6 sm:py-8 my-auto">
+                    <div className="text-amber-500 font-mono text-[10px] sm:text-xs uppercase tracking-widest mb-1.5 flex items-center justify-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                      <span>Public Intel Television</span>
+                    </div>
+                    <div className="text-lg sm:text-2xl md:text-3xl font-black tracking-widest uppercase font-mono text-white group-hover:text-amber-400 transition-colors drop-shadow-lg">
+                      PUBLIC INTEL NEWS INCOMING
+                    </div>
+                    <p className="text-slate-400 text-[10px] sm:text-xs font-mono mt-2">
+                      STANDBY // BROADCAST SATELLITE DISPATCH
+                    </p>
+                  </div>
+
+                  <div className="relative z-10 flex items-center justify-between text-xs text-white border-t border-slate-800 pt-3">
+                    <span className="font-semibold text-amber-400 font-mono">CHANNEL 01 // CONTINENTAL DEFENSE</span>
+                    <span className="font-mono text-slate-400">TELEVISION WIRE</span>
+                  </div>
                 </div>
 
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <button
-                    onClick={() => alert('Starting Public Intel Television feed...')}
-                    className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow-xl transition-transform hover:scale-110 pl-1 border-2 border-white"
-                  >
-                    <Play className="w-8 h-8 fill-white" />
-                  </button>
-                </div>
-
-                <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-xs text-white">
-                  <span className="font-semibold">{TELEVISION_SHOWS[0].category}</span>
-                  <span className="font-mono">{TELEVISION_SHOWS[0].views}</span>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-xl pl-1 border-2 border-white/80">
+                    <Play className="w-7 h-7 fill-white" />
+                  </div>
                 </div>
               </div>
 
@@ -157,16 +161,21 @@ export default function MultimediaSection() {
                   key={tv.id}
                   className="p-4 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 hover:border-red-600 dark:hover:border-red-500 transition-all flex flex-col justify-between group shadow-xs"
                 >
-                  <div className="relative aspect-video w-full rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700 mb-3">
-                    <Image
-                      src={tv.thumbnail}
-                      alt={tv.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      sizes="(max-width: 1024px) 100vw, 33vw"
-                    />
-                    <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/80 text-[10px] font-mono text-white">
-                      {tv.duration}
+                  <div className="relative aspect-video w-full rounded-lg overflow-hidden bg-radial-[at_top_left] from-slate-900 to-black border border-slate-800 mb-3 flex flex-col justify-between p-3 text-center select-none">
+                    <div className="flex items-center justify-between text-[8px] font-mono text-amber-400">
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                        PI-TV
+                      </span>
+                      <span className="text-slate-400">{tv.duration}</span>
+                    </div>
+                    <div className="my-auto py-1">
+                      <div className="text-[10px] font-black uppercase tracking-wider text-white font-mono leading-tight">
+                        PUBLIC INTEL<br/>NEWS INCOMING
+                      </div>
+                    </div>
+                    <div className="text-[8px] font-mono text-slate-500 border-t border-slate-800 pt-1">
+                      BROADCAST EPISODE
                     </div>
                   </div>
                   <div>
@@ -277,19 +286,22 @@ export default function MultimediaSection() {
                 className="p-5 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 hover:border-amber-600 dark:hover:border-amber-500 transition-all flex flex-col justify-between shadow-xs hover:shadow-md group"
               >
                 <div>
-                  <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-700 mb-4">
-                    <Image
-                      src={ep.coverImage}
-                      alt={ep.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      sizes="(max-width: 768px) 100vw, 25vw"
-                    />
-                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-[10px] font-bold uppercase text-amber-800 dark:text-amber-400 border border-slate-200 dark:border-slate-700">
-                      {ep.episodeNumber}
+                  <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-radial-[at_top_left] from-slate-900 to-black p-4 mb-4 flex flex-col justify-between border border-amber-600/30 select-none">
+                    <div className="flex items-center justify-between text-[9px] font-mono">
+                      <span className="px-2 py-0.5 rounded bg-amber-950/80 text-amber-400 border border-amber-500/30 font-bold">
+                        {ep.episodeNumber}
+                      </span>
+                      <span className="text-slate-400">{ep.duration}</span>
                     </div>
-                    <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/80 text-[10px] font-mono text-white">
-                      {ep.duration}
+                    <div className="text-center my-auto py-2">
+                      <Headphones className="w-6 h-6 text-amber-500/80 mx-auto mb-2" />
+                      <div className="text-xs font-black uppercase tracking-wider text-white font-mono leading-tight">
+                        PUBLIC INTEL<br/>NEWS INCOMING
+                      </div>
+                      <div className="text-[9px] font-mono text-slate-400 mt-1">AUDIO BRIEFING</div>
+                    </div>
+                    <div className="text-[8px] font-mono text-amber-500/80 text-center border-t border-slate-800 pt-1">
+                      STRATEGIC PODCAST
                     </div>
                   </div>
 

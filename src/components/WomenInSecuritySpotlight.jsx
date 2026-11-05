@@ -2,8 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { Sparkles, Quote, ArrowRight } from 'lucide-react';
+import { Sparkles, Quote, ArrowRight, Shield } from 'lucide-react';
 import { WOMEN_IN_SECURITY } from '@/lib/data/womenInSecurity';
 
 export default function WomenInSecuritySpotlight() {
@@ -47,14 +46,8 @@ export default function WomenInSecuritySpotlight() {
             <div>
               {/* Leader Avatar & Country */}
               <div className="flex items-center gap-4 mb-5">
-                <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-amber-600 shrink-0">
-                  <Image
-                    src={leader.image}
-                    alt={leader.name}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    sizes="64px"
-                  />
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-slate-900 border-2 border-amber-600 flex items-center justify-center text-amber-500 shrink-0 shadow-md">
+                  <Shield className="w-7 h-7 text-amber-500" />
                 </div>
                 <div>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400">

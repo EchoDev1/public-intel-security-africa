@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import Image from 'next/image';
 import { Camera, MapPin, X, ZoomIn } from 'lucide-react';
 import { GALLERY_ITEMS } from '@/lib/data/gallery';
 
@@ -58,48 +57,55 @@ export default function GalleryPage() {
             onClick={() => setSelectedPhoto(item)}
             className="group cursor-pointer relative rounded-2xl overflow-hidden bg-white border border-slate-200 hover:border-amber-600 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1"
           >
-            <div className="relative aspect-[4/5] w-full overflow-hidden bg-slate-100">
-              <Image
-                src={item.image}
-                alt={item.title}
-                fill
-                className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent opacity-90 group-hover:opacity-80 transition-opacity"></div>
+            <div className="relative aspect-[4/5] w-full overflow-hidden bg-radial-[at_top_left] from-slate-900 via-slate-950 to-black p-4 flex flex-col justify-between border-b border-amber-600/30 select-none">
+              {/* Tactical Grid Background */}
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,#eab3080c_1px,transparent_1px),linear-gradient(to_bottom,#eab3080c_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none"></div>
 
               {/* Hover Zoom Icon */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="p-3 rounded-full bg-white text-slate-900 shadow-xl">
-                  <ZoomIn className="w-6 h-6" />
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                <div className="p-3 rounded-full bg-amber-500 text-slate-950 shadow-xl">
+                  <ZoomIn className="w-5 h-5" />
                 </div>
               </div>
 
               {/* Category Pill */}
-              <div className="absolute top-3 left-3">
-                <span className="px-2.5 py-1 rounded-md bg-white/90 backdrop-blur-md text-slate-900 text-[10px] font-bold uppercase tracking-wider border border-slate-200 shadow-sm">
+              <div className="relative z-10 flex items-center justify-between">
+                <span className="px-2.5 py-1 rounded-md bg-amber-950/80 text-amber-400 text-[10px] font-mono font-bold uppercase tracking-wider border border-amber-500/40">
                   {item.category}
                 </span>
+                <Camera className="w-4 h-4 text-amber-500/80" />
+              </div>
+
+              {/* Centered Incoming Typography */}
+              <div className="relative z-10 text-center py-6 my-auto">
+                <div className="text-amber-500/80 font-mono text-[9px] uppercase tracking-widest mb-1.5 flex items-center justify-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                  <span>PHOTO DISPATCH ARCHIVE</span>
+                </div>
+                <div className="text-sm sm:text-base font-black tracking-widest uppercase font-mono text-white group-hover:text-amber-400 transition-colors drop-shadow-md">
+                  PUBLIC INTEL NEWS INCOMING
+                </div>
+                <span className="text-[9px] font-mono text-slate-400 mt-1 block">FIELD TRANSMISSION DISPATCH</span>
               </div>
 
               {/* Overlaid Bottom Details */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 space-y-2">
+              <div className="relative z-10 space-y-2 border-t border-slate-800 pt-2">
                 <div className="flex items-center gap-1.5 text-[10px] text-amber-300 font-mono font-medium">
                   <MapPin className="w-3 h-3 text-amber-400 shrink-0" />
                   <span className="truncate">{item.location}</span>
                 </div>
 
-                <h3 className="text-sm font-bold text-white leading-snug group-hover:text-amber-300 transition-colors font-serif">
+                <h3 className="text-xs sm:text-sm font-bold text-white leading-snug group-hover:text-amber-300 transition-colors font-serif">
                   {item.title}
                 </h3>
 
-                <p className="text-[11px] text-slate-200 line-clamp-2">
+                <p className="text-[11px] text-slate-400 line-clamp-2">
                   {item.fieldNotes}
                 </p>
 
-                <div className="pt-2 border-t border-white/20 flex items-center justify-between text-[10px] text-slate-300 font-medium">
+                <div className="pt-1.5 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400 font-medium font-mono">
                   <span className="truncate max-w-[130px]">{item.photographer}</span>
-                  <span className="text-amber-300 font-bold font-mono">{item.date}</span>
+                  <span className="text-amber-400 font-bold">{item.date}</span>
                 </div>
               </div>
             </div>
@@ -118,15 +124,34 @@ export default function GalleryPage() {
               <X className="w-5 h-5" />
             </button>
 
-            {/* Large Image Preview */}
-            <div className="relative md:w-3/5 aspect-square md:aspect-auto bg-slate-100">
-              <Image
-                src={selectedPhoto.image}
-                alt={selectedPhoto.title}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 60vw"
-              />
+            {/* Tactical Incoming Dispatch Preview */}
+            <div className="relative md:w-3/5 min-h-[300px] bg-radial-[at_top_left] from-slate-900 via-slate-950 to-black p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r border-amber-600/30 select-none">
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,#eab3080c_1px,transparent_1px),linear-gradient(to_bottom,#eab3080c_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none"></div>
+
+              <div className="relative z-10 flex items-center justify-between">
+                <span className="px-2.5 py-1 rounded bg-amber-950/80 text-amber-400 text-[10px] font-mono font-bold uppercase tracking-wider border border-amber-500/40">
+                  {selectedPhoto.category}
+                </span>
+                <span className="text-xs font-mono text-slate-400">ARCHIVE TRANSMISSION</span>
+              </div>
+
+              <div className="relative z-10 text-center py-10 my-auto">
+                <div className="text-amber-500/80 font-mono text-xs uppercase tracking-widest mb-2 flex items-center justify-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                  <span>CONFIDENTIAL BUREAU PHOTOJOURNALISM</span>
+                </div>
+                <div className="text-xl md:text-2xl font-black tracking-widest uppercase font-mono text-white drop-shadow-md">
+                  PUBLIC INTEL NEWS INCOMING
+                </div>
+                <p className="text-slate-400 text-xs font-mono mt-2">
+                  HIGH-RESOLUTION SATELLITE & FIELD LENS ARCHIVE
+                </p>
+              </div>
+
+              <div className="relative z-10 flex items-center justify-between text-[10px] text-slate-400 font-mono border-t border-slate-800 pt-2">
+                <span>LOC: {selectedPhoto.location}</span>
+                <span className="text-amber-400 font-bold">{selectedPhoto.date}</span>
+              </div>
             </div>
 
             {/* Metadata & Field Notes */}

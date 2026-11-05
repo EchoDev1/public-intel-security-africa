@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Camera, MapPin, ArrowRight } from 'lucide-react';
 import { GALLERY_ITEMS } from '@/lib/data/gallery';
 
@@ -43,30 +42,37 @@ export default function PhotoGallerySection() {
             key={item.id}
             className="group relative rounded-2xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-600 dark:hover:border-amber-500 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between"
           >
-            <div className="relative aspect-[4/5] w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
-              <Image
-                src={item.image}
-                alt={item.title}
-                fill
-                className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent opacity-90 group-hover:opacity-80 transition-opacity"></div>
+            <div className="relative aspect-[4/5] w-full overflow-hidden bg-radial-[at_top_left] from-slate-900 via-slate-950 to-black p-4 flex flex-col justify-between border-b border-amber-600/30 select-none">
+              {/* Tactical Grid Background */}
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,#eab3080c_1px,transparent_1px),linear-gradient(to_bottom,#eab3080c_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none"></div>
 
               {/* Category Pill */}
-              <div className="absolute top-3 left-3">
-                <span className="px-2.5 py-1 rounded-md bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-slate-900 dark:text-white text-[10px] font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 shadow-xs">
+              <div className="relative z-10 flex items-center justify-between">
+                <span className="px-2.5 py-1 rounded bg-amber-950/80 text-amber-400 text-[10px] font-mono font-bold uppercase tracking-wider border border-amber-500/40">
                   {item.category}
                 </span>
+                <Camera className="w-4 h-4 text-amber-500/80" />
+              </div>
+
+              {/* Centered Incoming Typography */}
+              <div className="relative z-10 text-center py-6 my-auto">
+                <div className="text-amber-500/80 font-mono text-[9px] uppercase tracking-widest mb-1.5 flex items-center justify-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                  <span>FIELD PHOTO ARCHIVE</span>
+                </div>
+                <div className="text-sm sm:text-base font-black tracking-widest uppercase font-mono text-white group-hover:text-amber-400 transition-colors drop-shadow-md">
+                  PUBLIC INTEL NEWS INCOMING
+                </div>
+                <span className="text-[9px] font-mono text-slate-400 mt-1 block">FIELD DISPATCH PENDING</span>
               </div>
 
               {/* Content overlay */}
-              <div className="absolute bottom-4 left-4 right-4 text-white space-y-1">
+              <div className="relative z-10 space-y-1 border-t border-slate-800 pt-2">
                 <div className="flex items-center gap-1 text-[11px] text-amber-400 font-medium">
                   <MapPin className="w-3 h-3" />
                   <span>{item.location}</span>
                 </div>
-                <h4 className="text-sm font-bold leading-snug line-clamp-2 font-serif">
+                <h4 className="text-sm font-bold leading-snug line-clamp-2 font-serif text-white">
                   {item.title}
                 </h4>
               </div>

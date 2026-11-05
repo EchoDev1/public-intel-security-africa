@@ -287,17 +287,49 @@ export default function TopIntelStory() {
         <div className="lg:col-span-7 flex flex-col">
           <div className="group rounded-2xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-600 dark:hover:border-amber-500 transition-all duration-300 shadow-md hover:shadow-xl flex flex-col h-full">
             
-            {/* Real News Photo from Unsplash */}
-            <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full overflow-hidden bg-slate-900">
-              <Image
-                src={activeStory.image}
-                alt={activeStory.title}
-                fill
-                priority
-                className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                sizes="(max-width: 1024px) 100vw, 58vw"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent"></div>
+            {/* Incoming Tactical Cover Card or Real Image */}
+            <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full overflow-hidden bg-slate-950">
+              {activeStory.isRealUpload ? (
+                <>
+                  <Image
+                    src={activeStory.image}
+                    alt={activeStory.title}
+                    fill
+                    priority
+                    unoptimized
+                    className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                    sizes="(max-width: 1024px) 100vw, 58vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent"></div>
+                </>
+              ) : (
+                <div className="w-full h-full bg-radial-[at_top_left] from-slate-900 via-slate-950 to-black p-5 sm:p-7 flex flex-col justify-between border-b border-amber-600/30 select-none">
+                  <div className="absolute inset-0 bg-[linear-gradient(to_right,#eab3080c_1px,transparent_1px),linear-gradient(to_bottom,#eab3080c_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none"></div>
+
+                  <div className="relative z-10 flex items-center justify-between">
+                    <span className="px-2.5 py-1 rounded bg-amber-950/80 text-amber-400 text-[10px] font-mono font-bold uppercase tracking-wider border border-amber-500/40">
+                      {activeStory.category}
+                    </span>
+                    <Radio className="w-4 h-4 text-amber-500/80" />
+                  </div>
+
+                  <div className="relative z-10 text-center py-6 my-auto">
+                    <div className="text-amber-500/80 font-mono text-[9px] uppercase tracking-widest mb-1.5 flex items-center justify-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                      <span>BUREAU STRATEGIC RADAR</span>
+                    </div>
+                    <div className="text-lg sm:text-2xl font-black tracking-widest uppercase font-mono text-white drop-shadow-md">
+                      PUBLIC INTEL NEWS INCOMING
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-400 mt-1 block">OFFICIAL DISPATCH PENDING</span>
+                  </div>
+
+                  <div className="relative z-10 flex items-center justify-between text-[10px] text-slate-400 font-mono border-t border-slate-800 pt-1.5">
+                    <span>{activeStory.location}</span>
+                    <span className="text-amber-400 font-bold">{activeStory.threatLevel}</span>
+                  </div>
+                </div>
+              )}
 
               {/* Badges on Real News Photo */}
               <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2">
@@ -396,16 +428,26 @@ export default function TopIntelStory() {
                   href={`/article/${story.slug}`}
                   className="group p-2 sm:p-2.5 lg:p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-600 dark:hover:border-amber-500 transition-all flex gap-2.5 sm:gap-3 shadow-xs hover:shadow-md cursor-pointer"
                 >
-                  {/* Real News Photo Thumbnail */}
-                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-lg overflow-hidden shrink-0 bg-slate-900">
-                    <Image
-                      src={story.image}
-                      alt={story.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
-                      sizes="(max-width: 640px) 64px, (max-width: 1024px) 80px, 96px"
-                    />
-                    <span className="absolute bottom-0.5 left-0.5 sm:bottom-1 sm:left-1 px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded text-[7.5px] sm:text-[8px] font-bold uppercase tracking-wider bg-slate-900/90 text-amber-300">
+                  {/* News Photo or Tactical Incoming Thumbnail */}
+                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-lg overflow-hidden shrink-0 bg-slate-950 border border-slate-800 flex items-center justify-center">
+                    {story.isRealUpload ? (
+                      <Image
+                        src={story.image}
+                        alt={story.title}
+                        fill
+                        unoptimized
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                        sizes="(max-width: 640px) 64px, (max-width: 1024px) 80px, 96px"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-slate-950 p-1 flex flex-col items-center justify-center text-center">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse mb-0.5"></span>
+                        <span className="text-[6.5px] sm:text-[7.5px] font-black uppercase tracking-tight text-amber-300 font-mono leading-tight">
+                          PUBLIC INTEL<br/>NEWS INCOMING
+                        </span>
+                      </div>
+                    )}
+                    <span className="absolute bottom-0.5 left-0.5 sm:bottom-1 sm:left-1 px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded text-[7.5px] sm:text-[8px] font-bold uppercase tracking-wider bg-slate-900/90 text-amber-300 z-10">
                       {story.threatLevel}
                     </span>
                   </div>

@@ -1,7 +1,6 @@
 import React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
-import { Sparkles, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Sparkles, CheckCircle2, ArrowRight, Shield } from 'lucide-react';
 import { WOMEN_IN_SECURITY } from '@/lib/data/womenInSecurity';
 
 export const metadata = {
@@ -68,24 +67,8 @@ export default function WomenInSecurityPage() {
             >
               <div className="space-y-5">
                 <div className="flex items-start gap-4">
-                  <div className="relative w-20 h-20 rounded-full overflow-hidden bg-slate-100 border-2 border-amber-600 shrink-0 flex items-center justify-center">
-                    {(() => {
-                      const rawImg = leader.image || leader.imageUrl;
-                      const leaderImg = (typeof rawImg === 'string' && rawImg.trim().length > 0) ? rawImg.trim() : null;
-                      return leaderImg ? (
-                        <Image
-                          src={leaderImg}
-                          alt={leader.name || 'Leader'}
-                          fill
-                          className="object-cover"
-                          sizes="80px"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center font-bold text-amber-700 bg-amber-50 text-xl font-serif">
-                          {leader.name ? leader.name.charAt(0) : 'W'}
-                        </div>
-                      );
-                    })()}
+                  <div className="w-16 h-16 rounded-full bg-slate-900 border-2 border-amber-600 flex items-center justify-center text-amber-500 shrink-0 shadow-md">
+                    <Shield className="w-8 h-8 text-amber-500" />
                   </div>
                   <div>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">

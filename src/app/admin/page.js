@@ -305,8 +305,8 @@ export default function AdminDashboardPage() {
     content: '',
     authorName: 'Lady Dakore Ekpendu',
     authorRole: 'Executive Director & Chief Editor',
-    coverImage: 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1200&q=80',
-    coverCaption: 'News photo: Public Intel Security Africa field lens.',
+    coverImage: '',
+    coverCaption: 'Public Intel Security Africa field lens.',
     videoUrl: '',
     videoCaption: '',
     audioUrl: '',
@@ -2294,9 +2294,9 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                   author: {
                     name: newArticle.authorName || 'Lady Dakore Ekpendu',
                     role: newArticle.authorRole || 'Executive Director & Chief Editor',
-                    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80'
+                    avatar: ''
                   },
-                  coverImage: articlePhotoPreview || newArticle.coverImage || 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1200&q=80',
+                  coverImage: articlePhotoPreview || newArticle.coverImage || '',
                   coverCaption: newArticle.coverCaption || 'Public Intel Security Africa field lens.',
                   videoUrl: articleVideoPreview || newArticle.videoUrl || '',
                   videoCaption: newArticle.videoCaption || '',
@@ -2344,8 +2344,8 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                   content: '',
                   authorName: 'Lady Dakore Ekpendu',
                   authorRole: 'Executive Director & Chief Editor',
-                  coverImage: 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1200&q=80',
-                  coverCaption: 'News photo: Public Intel Security Africa field lens.',
+                  coverImage: '',
+                  coverCaption: 'Public Intel Security Africa field lens.',
                   videoUrl: '',
                   videoCaption: '',
                   audioUrl: '',
@@ -6423,7 +6423,7 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 if (editingSocial) {
                   setSocialLinks(socialLinks.map(s => s.id === editingSocial.id ? { ...editingSocial } : s));
@@ -6560,7 +6560,7 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 if (editingDivision) {
                   setSpecializedDivisions(specializedDivisions.map(d => (d.id === editingDivision.id || d.slug === editingDivision.slug) ? {
@@ -6703,7 +6703,7 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 if (editingSpecialReport) {
                   setSpecialReportsList(specialReportsList.map(r => r.id === editingSpecialReport.id ? {
@@ -6726,15 +6726,24 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                     excerpt: newSpecialReport.excerpt,
                     content: newSpecialReport.content,
                     publishedAt: new Date().toISOString().split('T')[0],
-                    coverImage: specialReportPhotoPreview || newSpecialReport.coverImage || 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1200&q=80',
+                    coverImage: specialReportPhotoPreview || newSpecialReport.coverImage || '',
                     pdfUrl: newSpecialReport.pdfUrl || 'https://publicintel.africa/dossiers/investigation.pdf',
                     isSpecialReport: true,
+                    isRealUpload: true,
                     author: {
                       name: newSpecialReport.leadAuthor || 'Lady Dakore Ekpendu',
                       role: newSpecialReport.authorRole || 'Editor-in-Chief & Lead Investigator',
-                      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80'
+                      avatar: ''
                     }
                   };
+                  try {
+                    await fetch('/api/articles', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(rep)
+                    });
+                    fetchLiveArticles();
+                  } catch (_) {}
                   setSpecialReportsList([rep, ...specialReportsList]);
                   setArticlesList([rep, ...articlesList]);
                   showToast(`Special Report "${rep.title}" published to Dossiers!`);
@@ -6879,7 +6888,7 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 if (editingPartnership) {
                   setPartnerships(partnerships.map(p => p.id === editingPartnership.id ? { ...editingPartnership } : p));
@@ -7032,7 +7041,7 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 if (editingBureau) {
                   setBureauContacts(bureauContacts.map(b => (b.id && b.id === editingBureau.id) || b.city === editingBureau.city ? { ...editingBureau } : b));
@@ -7202,7 +7211,7 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 if (editingThreat) {
                   const updated = threatRadarList.map((t, i) => i === editingThreat.idx ? {
@@ -7364,7 +7373,7 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 if (editingTeamMember) {
                   setEditorialTeam(editorialTeam.map(m => m.id === editingTeamMember.id ? {

@@ -1,6 +1,5 @@
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Users, MapPin, ArrowRight } from 'lucide-react';
 
 export default function CommunityReportsPage() {
@@ -81,17 +80,25 @@ export default function CommunityReportsPage() {
             className="group rounded-2xl bg-white border border-slate-200 hover:border-amber-600 p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1"
           >
             <div>
-              <div className="relative aspect-[16/10] w-full rounded-xl overflow-hidden bg-slate-100 mb-4">
-                <Image
-                  src={story.coverImage}
-                  alt={story.title}
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-300"
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                />
-                <div className="absolute top-3 left-3 px-2.5 py-0.5 rounded bg-white/90 text-[10px] font-mono text-amber-800 font-bold border border-slate-200 flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-amber-700" />
-                  <span>{story.location}</span>
+              <div className="relative aspect-[16/10] w-full rounded-xl overflow-hidden bg-radial-[at_top_left] from-slate-900 to-black p-4 mb-4 flex flex-col justify-between border border-amber-600/30 select-none">
+                <div className="flex items-center justify-between">
+                  <div className="px-2.5 py-0.5 rounded bg-amber-950/80 text-[10px] font-mono text-amber-400 font-bold border border-amber-500/40 flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-amber-400" />
+                    <span>{story.location}</span>
+                  </div>
+                  <span className="text-[9px] font-mono text-slate-400">COMMUNITY</span>
+                </div>
+
+                <div className="text-center py-2 my-auto">
+                  <div className="text-xs font-black uppercase tracking-wider text-white font-mono leading-tight">
+                    PUBLIC INTEL<br/>NEWS INCOMING
+                  </div>
+                  <div className="text-[8px] font-mono text-amber-500 mt-1">COMMUNITY WATCH WIRE</div>
+                </div>
+
+                <div className="text-[8px] font-mono text-slate-500 border-t border-slate-800 pt-1 flex justify-between">
+                  <span>GRASSROOTS DISPATCH</span>
+                  <span className="text-amber-400 font-bold">VERIFIED MONITOR</span>
                 </div>
               </div>
 

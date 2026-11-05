@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import { Headphones, Play } from 'lucide-react';
 import { PODCAST_EPISODES } from '@/lib/data/multimedia';
 import { useRadio } from '@/context/RadioContext';
@@ -38,14 +37,11 @@ export default function PodcastsPage() {
             >
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-slate-100 shrink-0 border border-slate-200">
-                    <Image
-                      src={ep.coverImage}
-                      alt={ep.title}
-                      fill
-                      className="object-cover"
-                      sizes="80px"
-                    />
+                  <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-slate-950 shrink-0 border border-amber-600/30 flex flex-col items-center justify-center p-1 text-center select-none">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse mb-0.5"></span>
+                    <span className="text-[7.5px] font-black uppercase tracking-tight text-amber-300 font-mono leading-tight">
+                      PUBLIC INTEL<br/>NEWS INCOMING
+                    </span>
                   </div>
                   <div>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">

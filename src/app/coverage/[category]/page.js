@@ -1,6 +1,5 @@
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { Shield, ArrowLeft, Globe, Filter } from 'lucide-react';
 import { getCategoryBySlug, CATEGORIES } from '@/lib/data/categories';
@@ -84,6 +83,7 @@ export default async function CategoryDetailPage({ params }) {
       id: `${category.slug}-mock-${idx}`,
       categorySlug: category.slug,
       categoryName: category.name,
+      isRealUpload: false,
       title: `${category.name} Field Analysis: Strategic Continental Review & Threat Assessment (Part ${idx + 1})`,
       excerpt: `Comprehensive intelligence dossier evaluating sovereign vulnerabilities, policy architecture, and regional interdiction operations in ${category.name.toLowerCase()}.`,
     }));
@@ -137,19 +137,8 @@ export default async function CategoryDetailPage({ params }) {
       </div>
 
       {/* Category Dedicated Hero Banner */}
-      <div className="relative rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 p-8 md:p-12 shadow-xl text-white">
-        {category.featuredImage && (
-          <div className="absolute inset-0 opacity-25">
-            <Image
-              src={category.featuredImage}
-              alt={category.name}
-              fill
-              className="object-cover"
-              sizes="100vw"
-              priority
-            />
-          </div>
-        )}
+      <div className="relative rounded-3xl overflow-hidden bg-radial-[at_top_left] from-slate-900 via-slate-950 to-black border border-slate-800 p-8 md:p-12 shadow-xl text-white">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#eab3080c_1px,transparent_1px),linear-gradient(to_bottom,#eab3080c_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent"></div>
 
         <div className="relative z-10 max-w-3xl space-y-4">

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import Image from 'next/image';
 import { Tv, Play } from 'lucide-react';
 import { TELEVISION_SHOWS } from '@/lib/data/multimedia';
 
@@ -31,14 +30,34 @@ export default function TelevisionPage() {
 
         {/* Video Frame */}
         <div className="relative aspect-video w-full rounded-3xl overflow-hidden bg-slate-900 border border-slate-300 shadow-xl group">
-          <Image
-            src={selectedVideo.thumbnail}
-            alt={selectedVideo.title}
-            fill
-            className="object-cover opacity-90"
-            sizes="100vw"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
+          <div className="w-full h-full bg-radial-[at_top_left] from-slate-900 via-slate-950 to-black p-6 sm:p-10 flex flex-col justify-between select-none">
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#eab3080c_1px,transparent_1px),linear-gradient(to_bottom,#eab3080c_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
+            
+            <div className="relative z-10 flex items-center justify-between">
+              <span className="px-3 py-1 rounded bg-red-600 text-white font-bold text-xs uppercase tracking-widest flex items-center gap-1.5 shadow-md">
+                <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                PI-TV LIVE BROADCAST
+              </span>
+              <span className="text-xs font-mono text-amber-400">OFFICIAL MEDIA CHANNEL</span>
+            </div>
+
+            <div className="relative z-10 text-center py-6 sm:py-10 my-auto">
+              <div className="text-amber-500 font-mono text-xs uppercase tracking-widest mb-2">
+                Public Intel Television Broadcast
+              </div>
+              <div className="text-xl sm:text-3xl md:text-5xl font-black tracking-widest uppercase font-mono text-white drop-shadow-xl">
+                PUBLIC INTEL NEWS INCOMING
+              </div>
+              <p className="text-slate-400 text-xs sm:text-sm font-mono mt-2">
+                TRANSMISSION RADAR // STANDBY FOR SATELLITE DISPATCH
+              </p>
+            </div>
+
+            <div className="relative z-10 flex items-center justify-between text-xs font-mono text-slate-400 border-t border-slate-800 pt-3">
+              <span>STUDIO SEC-01</span>
+              <span className="text-amber-400 font-bold">LIVE TELEVISION BROADCAST</span>
+            </div>
+          </div>
 
           {/* Play Button */}
           <div className="absolute inset-0 flex items-center justify-center">
@@ -101,20 +120,20 @@ export default function TelevisionPage() {
               className="group cursor-pointer rounded-2xl bg-white border border-slate-200 hover:border-red-600 p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1"
             >
               <div>
-                <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-slate-100 mb-3">
-                  <Image
-                    src={tv.thumbnail}
-                    alt={tv.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                  />
-                  <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors"></div>
-                  <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/80 text-[10px] font-mono text-white">
-                    {tv.duration}
+                <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-radial-[at_top_left] from-slate-900 to-black p-3 mb-3 flex flex-col justify-between border border-slate-800 select-none">
+                  <div className="flex items-center justify-between text-[9px] font-mono">
+                    <span className="px-2 py-0.5 rounded bg-red-600 text-white font-bold uppercase text-[9px]">
+                      {tv.category}
+                    </span>
+                    <span className="text-slate-400">{tv.duration}</span>
                   </div>
-                  <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-red-600 text-[10px] font-bold uppercase text-white">
-                    {tv.category}
+                  <div className="text-center my-auto py-1">
+                    <div className="text-[10px] font-black uppercase tracking-wider text-white font-mono leading-tight">
+                      PUBLIC INTEL<br/>NEWS INCOMING
+                    </div>
+                  </div>
+                  <div className="text-[8px] font-mono text-slate-500 border-t border-slate-800 pt-1">
+                    BROADCAST EPISODE
                   </div>
                 </div>
 

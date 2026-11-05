@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Award, BookOpen, Clock, Users, ArrowRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { TRAINING_COURSES } from '@/lib/data/training';
 
@@ -45,24 +44,31 @@ export default function TrainingAcademySection() {
               className="group rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 hover:border-amber-600 dark:hover:border-amber-500 overflow-hidden flex flex-col justify-between shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-1"
             >
               <div>
-                {/* Course Image */}
-                <div className="relative aspect-[16/9] w-full overflow-hidden bg-slate-100 dark:bg-slate-700">
-                  <Image
-                    src={course.coverImage}
-                    alt={course.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
-                  
-                  <div className="absolute top-3 left-3 px-2.5 py-1 rounded bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-slate-900 dark:text-white text-[10px] font-mono font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 shadow-xs">
-                    {course.code}
+                {/* Course Incoming Tactical Card */}
+                <div className="relative aspect-[16/9] w-full overflow-hidden bg-radial-[at_top_left] from-slate-900 via-slate-950 to-black p-4 flex flex-col justify-between border-b border-amber-600/30 select-none">
+                  {/* Tactical Grid Background */}
+                  <div className="absolute inset-0 bg-[linear-gradient(to_right,#eab3080c_1px,transparent_1px),linear-gradient(to_bottom,#eab3080c_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none"></div>
+
+                  <div className="relative z-10 flex items-center justify-between">
+                    <span className="px-2.5 py-1 rounded bg-amber-950/80 text-amber-400 text-[10px] font-mono font-bold uppercase tracking-wider border border-amber-500/40">
+                      {course.code}
+                    </span>
+                    <Award className="w-4 h-4 text-amber-500/80" />
                   </div>
 
-                  <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-[11px] text-white font-medium">
-                    <span className="font-bold text-amber-300">{course.level}</span>
-                    <span className="font-mono">{course.duration}</span>
+                  <div className="relative z-10 text-center py-4 my-auto">
+                    <div className="text-amber-500/80 font-mono text-[9px] uppercase tracking-widest mb-1">
+                      Public Intel Academy
+                    </div>
+                    <div className="text-base sm:text-lg font-black tracking-widest uppercase font-mono text-white group-hover:text-amber-400 transition-colors drop-shadow-md">
+                      PUBLIC INTEL NEWS INCOMING
+                    </div>
+                    <span className="text-[9px] font-mono text-slate-400 mt-1 block">COURSE ADMISSION DISPATCH</span>
+                  </div>
+
+                  <div className="relative z-10 flex items-center justify-between text-[10px] text-white font-medium border-t border-slate-800 pt-1.5">
+                    <span className="font-bold text-amber-300 font-mono">{course.level}</span>
+                    <span className="font-mono text-slate-400">{course.duration}</span>
                   </div>
                 </div>
 

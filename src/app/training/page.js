@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import Image from 'next/image';
 import { Award, ShieldCheck, CheckCircle2, X, Check } from 'lucide-react';
 import { TRAINING_COURSES } from '@/lib/data/training';
 
@@ -68,14 +67,32 @@ export default function TrainingPage() {
                 <span className="text-slate-500 font-semibold">{course.level}</span>
               </div>
 
-              <div className="relative aspect-[16/9] w-full rounded-xl overflow-hidden bg-slate-100">
-                <Image
-                  src={course.coverImage}
-                  alt={course.title}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                />
+              {/* Course Incoming Tactical Card */}
+              <div className="relative aspect-[16/9] w-full rounded-xl overflow-hidden bg-radial-[at_top_left] from-slate-900 via-slate-950 to-black p-4 flex flex-col justify-between border border-amber-600/30 select-none">
+                {/* Tactical Grid Background */}
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#eab3080c_1px,transparent_1px),linear-gradient(to_bottom,#eab3080c_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none"></div>
+
+                <div className="relative z-10 flex items-center justify-between">
+                  <span className="px-2 py-0.5 rounded bg-amber-950/80 text-amber-400 text-[10px] font-mono font-bold uppercase tracking-wider border border-amber-500/40">
+                    {course.code}
+                  </span>
+                  <Award className="w-4 h-4 text-amber-500/80" />
+                </div>
+
+                <div className="relative z-10 text-center py-2 my-auto">
+                  <div className="text-amber-500/80 font-mono text-[9px] uppercase tracking-widest mb-1">
+                    Public Intel Academy
+                  </div>
+                  <div className="text-sm sm:text-base font-black tracking-widest uppercase font-mono text-white drop-shadow-md">
+                    PUBLIC INTEL NEWS INCOMING
+                  </div>
+                  <span className="text-[9px] font-mono text-slate-400 mt-1 block">COURSE ADMISSION DISPATCH</span>
+                </div>
+
+                <div className="relative z-10 flex items-center justify-between text-[10px] text-white font-medium border-t border-slate-800 pt-1.5">
+                  <span className="font-bold text-amber-300 font-mono">{course.level}</span>
+                  <span className="font-mono text-slate-400">{course.duration}</span>
+                </div>
               </div>
 
               <h2 className="text-lg font-bold text-slate-900 font-serif leading-snug">
