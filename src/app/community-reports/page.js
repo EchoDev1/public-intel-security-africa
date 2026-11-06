@@ -90,8 +90,8 @@ export default function CommunityReportsPage() {
                 </div>
 
                 <div className="text-center py-2 my-auto">
-                  <div className="text-xs font-black uppercase tracking-wider text-white font-mono leading-tight">
-                    PUBLIC INTEL<br/>NEWS INCOMING
+                  <div className="text-[10px] font-black uppercase tracking-wider text-white font-mono leading-tight">
+                    COMMUNITY RESILIENCE &<br/>WATCH WIRE INCOMING
                   </div>
                   <div className="text-[8px] font-mono text-amber-500 mt-1">COMMUNITY WATCH WIRE</div>
                 </div>

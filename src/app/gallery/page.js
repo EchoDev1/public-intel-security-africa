@@ -82,8 +82,8 @@ export default function GalleryPage() {
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
                   <span>PHOTO DISPATCH ARCHIVE</span>
                 </div>
-                <div className="text-sm sm:text-base font-black tracking-widest uppercase font-mono text-white group-hover:text-amber-400 transition-colors drop-shadow-md">
-                  PUBLIC INTEL NEWS INCOMING
+                <div className="text-xs sm:text-sm font-black tracking-wider uppercase font-mono text-white group-hover:text-amber-400 transition-colors drop-shadow-md px-1">
+                  CONTINENTAL PHOTO ARCHIVE & FIELD LENS INCOMING
                 </div>
                 <span className="text-[9px] font-mono text-slate-400 mt-1 block">FIELD TRANSMISSION DISPATCH</span>
               </div>
@@ -140,8 +140,8 @@ export default function GalleryPage() {
                   <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
                   <span>CONFIDENTIAL BUREAU PHOTOJOURNALISM</span>
                 </div>
-                <div className="text-xl md:text-2xl font-black tracking-widest uppercase font-mono text-white drop-shadow-md">
-                  PUBLIC INTEL NEWS INCOMING
+                <div className="text-lg md:text-xl font-black tracking-wider uppercase font-mono text-white drop-shadow-md px-2">
+                  CONTINENTAL PHOTO ARCHIVE & FIELD LENS INCOMING
                 </div>
                 <p className="text-slate-400 text-xs font-mono mt-2">
                   HIGH-RESOLUTION SATELLITE & FIELD LENS ARCHIVE

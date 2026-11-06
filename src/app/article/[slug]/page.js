@@ -24,6 +24,7 @@ import AudioArticlePlayer from './AudioArticlePlayer';
 import ArticleActions from './ArticleActions';
 import JsonLd from '@/components/seo/JsonLd';
 import { SITE_CONFIG } from '@/lib/config/site';
+import { getSectionIncomingTitle } from '@/lib/utils/sectionBanners';
 
 export function generateStaticParams() {
   return ARTICLES.map((art) => ({ slug: art.slug }));
@@ -119,10 +120,23 @@ export default async function ArticlePage({ params }) {
     notFound();
   }
 
+  const isSeedArticle = Boolean(
+    !article.id ||
+    article.id.startsWith('art-0') ||
+    article.id.startsWith('hero-rot-') ||
+    article.id.startsWith('top-rot-') ||
+    article.id.startsWith('comm-') ||
+    article.id.includes('-mock-') ||
+    article.isRealUpload === false
+  );
+
   const isRealArticle = Boolean(
-    article.isRealUpload || 
+    (article.isRealUpload === true ||
     (article.id && article.id.startsWith('art-real-')) ||
-    (article.id && !article.id.startsWith('art-00') && !article.id.startsWith('hero-rot-'))
+    (article.id && !isSeedArticle && article.id.startsWith('art-') && article.id.length > 10)) &&
+    article.coverImage &&
+    typeof article.coverImage === 'string' &&
+    article.coverImage.trim() !== ''
   );
 
   const relatedArticles = ARTICLES.filter((a) => a.id !== article.id).slice(0, 3);
@@ -306,8 +320,8 @@ export default async function ArticlePage({ params }) {
               <div className="text-amber-400 font-mono text-xs sm:text-sm uppercase tracking-widest mb-2">
                 Official Declassified Intelligence Wire
               </div>
-              <div className="text-2xl sm:text-4xl md:text-5xl font-black tracking-widest uppercase font-mono text-white drop-shadow-xl">
-                PUBLIC INTEL NEWS INCOMING
+              <div className="text-xl sm:text-3xl md:text-4xl font-black tracking-wider uppercase font-mono text-white drop-shadow-xl px-4">
+                {getSectionIncomingTitle(article.categoryName || article.categorySlug, article)}
               </div>
               <p className="text-slate-400 text-xs sm:text-sm font-mono mt-3">
                 COMMUNICATION STATUS: AWAITING FIELD DISPATCH & TELEMETRY

@@ -60,8 +60,8 @@ export default function TrainingAcademySection() {
                     <div className="text-amber-500/80 font-mono text-[9px] uppercase tracking-widest mb-1">
                       Public Intel Academy
                     </div>
-                    <div className="text-base sm:text-lg font-black tracking-widest uppercase font-mono text-white group-hover:text-amber-400 transition-colors drop-shadow-md">
-                      PUBLIC INTEL NEWS INCOMING
+                    <div className="text-sm sm:text-base font-black tracking-wider uppercase font-mono text-white group-hover:text-amber-400 transition-colors drop-shadow-md">
+                      TRAINING ACADEMY COURSE DISPATCH INCOMING
                     </div>
                     <span className="text-[9px] font-mono text-slate-400 mt-1 block">COURSE ADMISSION DISPATCH</span>
                   </div>

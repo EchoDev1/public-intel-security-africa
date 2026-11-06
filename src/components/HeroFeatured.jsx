@@ -17,6 +17,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { getSectionIncomingTitle, getSectionIncomingCompact } from '@/lib/utils/sectionBanners';
 
 // Default pool of seed stories across platform features (phased out as real articles are posted)
 const SEED_HERO_STORIES = [
@@ -500,8 +501,8 @@ export default function HeroFeatured({ initialArticles = [] }) {
                       <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
                       <span>Official Bureau Intelligence Radar</span>
                     </div>
-                    <div className="text-lg sm:text-2xl md:text-3xl font-black tracking-widest uppercase font-mono text-white group-hover:text-amber-400 transition-colors drop-shadow-lg">
-                      PUBLIC INTEL NEWS INCOMING
+                    <div className="text-base sm:text-xl md:text-2xl font-black tracking-wider uppercase font-mono text-white group-hover:text-amber-400 transition-colors drop-shadow-lg px-2">
+                      {getSectionIncomingTitle(activeStory.category || activeStory.categorySlug, activeStory)}
                     </div>
                     <p className="text-slate-400 text-[10px] sm:text-xs font-mono mt-1.5">
                       SEC-DISPATCH // AWAITING REAL-TIME TRANSMISSION
@@ -656,8 +657,8 @@ export default function HeroFeatured({ initialArticles = [] }) {
                     ) : (
                       <div className="w-full h-full bg-slate-950 p-1 flex flex-col items-center justify-center text-center">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse mb-0.5"></span>
-                        <span className="text-[6.5px] sm:text-[7.5px] font-black uppercase tracking-tight text-amber-300 font-mono leading-tight">
-                          PUBLIC INTEL<br/>NEWS INCOMING
+                        <span className="text-[6px] sm:text-[7px] font-black uppercase tracking-tight text-amber-300 font-mono leading-tight whitespace-pre-line">
+                          {getSectionIncomingCompact(story.category || story.categorySlug, story)}
                         </span>
                       </div>
                     )}

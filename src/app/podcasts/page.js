@@ -39,8 +39,8 @@ export default function PodcastsPage() {
                 <div className="flex items-center gap-4">
                   <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-slate-950 shrink-0 border border-amber-600/30 flex flex-col items-center justify-center p-1 text-center select-none">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse mb-0.5"></span>
-                    <span className="text-[7.5px] font-black uppercase tracking-tight text-amber-300 font-mono leading-tight">
-                      PUBLIC INTEL<br/>NEWS INCOMING
+                    <span className="text-[7px] font-black uppercase tracking-tight text-amber-300 font-mono leading-tight">
+                      STRATEGIC PODCAST<br/>AUDIO INCOMING
                     </span>
                   </div>
                   <div>

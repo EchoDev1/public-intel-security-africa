@@ -4,16 +4,30 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Clock, Globe, ArrowUpRight, Shield, Flame, Play, Headphones } from 'lucide-react';
+import { getSectionIncomingTitle, getSectionIncomingCompact } from '@/lib/utils/sectionBanners';
 
 export default function ArticleCard({ article, layout = 'standard' }) {
   const [imageError, setImageError] = useState(false);
 
   if (!article) return null;
 
+  const isSeedArticle = Boolean(
+    !article.id ||
+    article.id.startsWith('art-0') ||
+    article.id.startsWith('hero-rot-') ||
+    article.id.startsWith('top-rot-') ||
+    article.id.startsWith('comm-') ||
+    article.id.includes('-mock-') ||
+    article.isRealUpload === false
+  );
+
   const isRealArticle = Boolean(
-    article.isRealUpload || 
+    (article.isRealUpload === true ||
     (article.id && article.id.startsWith('art-real-')) ||
-    (article.id && !article.id.startsWith('art-00') && !article.id.startsWith('hero-rot-'))
+    (article.id && !isSeedArticle && article.id.startsWith('art-') && article.id.length > 10)) &&
+    article.coverImage &&
+    typeof article.coverImage === 'string' &&
+    article.coverImage.trim() !== ''
   );
 
   const threatColor =
@@ -42,8 +56,8 @@ export default function ArticleCard({ article, layout = 'standard' }) {
           ) : (
             <div className="w-full h-full bg-slate-950 p-2 flex flex-col items-center justify-center text-center">
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse mb-1"></span>
-              <span className="text-[8px] font-black uppercase tracking-tight text-amber-300 font-mono leading-tight">
-                PUBLIC INTEL<br/>NEWS INCOMING
+              <span className="text-[7.5px] font-black uppercase tracking-tight text-amber-300 font-mono leading-tight whitespace-pre-line">
+                {getSectionIncomingCompact(article.categoryName || article.categorySlug, article)}
               </span>
             </div>
           )}
@@ -101,10 +115,10 @@ export default function ArticleCard({ article, layout = 'standard' }) {
             {/* Centered Incoming Typography */}
             <div className="relative z-10 text-center py-4 my-auto">
               <div className="text-amber-500/80 font-mono text-[9px] uppercase tracking-widest mb-1">
-                Official Intelligence Dispatch
+                {article.categoryName || 'Intelligence Dispatch'}
               </div>
-              <div className="text-base sm:text-lg font-black tracking-widest uppercase font-mono text-white group-hover:text-amber-400 transition-colors drop-shadow-md">
-                PUBLIC INTEL NEWS INCOMING
+              <div className="text-xs sm:text-sm md:text-base font-black tracking-wider uppercase font-mono text-white group-hover:text-amber-400 transition-colors drop-shadow-md px-2">
+                {getSectionIncomingTitle(article.categoryName || article.categorySlug, article)}
               </div>
             </div>
 

@@ -113,8 +113,8 @@ export default function MultimediaSection() {
                       <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
                       <span>Public Intel Television</span>
                     </div>
-                    <div className="text-lg sm:text-2xl md:text-3xl font-black tracking-widest uppercase font-mono text-white group-hover:text-amber-400 transition-colors drop-shadow-lg">
-                      PUBLIC INTEL NEWS INCOMING
+                    <div className="text-base sm:text-xl md:text-2xl font-black tracking-wider uppercase font-mono text-white group-hover:text-amber-400 transition-colors drop-shadow-lg px-2">
+                      PUBLIC INTEL TELEVISION BROADCAST INCOMING
                     </div>
                     <p className="text-slate-400 text-[10px] sm:text-xs font-mono mt-2">
                       STANDBY // BROADCAST SATELLITE DISPATCH
@@ -170,8 +170,8 @@ export default function MultimediaSection() {
                       <span className="text-slate-400">{tv.duration}</span>
                     </div>
                     <div className="my-auto py-1">
-                      <div className="text-[10px] font-black uppercase tracking-wider text-white font-mono leading-tight">
-                        PUBLIC INTEL<br/>NEWS INCOMING
+                      <div className="text-[9.5px] font-black uppercase tracking-wider text-white font-mono leading-tight">
+                        PI-TV BROADCAST<br/>NEWS INCOMING
                       </div>
                     </div>
                     <div className="text-[8px] font-mono text-slate-500 border-t border-slate-800 pt-1">
@@ -295,8 +295,8 @@ export default function MultimediaSection() {
                     </div>
                     <div className="text-center my-auto py-2">
                       <Headphones className="w-6 h-6 text-amber-500/80 mx-auto mb-2" />
-                      <div className="text-xs font-black uppercase tracking-wider text-white font-mono leading-tight">
-                        PUBLIC INTEL<br/>NEWS INCOMING
+                      <div className="text-[10px] font-black uppercase tracking-wider text-white font-mono leading-tight">
+                        STRATEGIC PODCAST<br/>AUDIO INCOMING
                       </div>
                       <div className="text-[9px] font-mono text-slate-400 mt-1">AUDIO BRIEFING</div>
                     </div>

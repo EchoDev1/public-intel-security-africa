@@ -45,8 +45,8 @@ export default function TelevisionPage() {
               <div className="text-amber-500 font-mono text-xs uppercase tracking-widest mb-2">
                 Public Intel Television Broadcast
               </div>
-              <div className="text-xl sm:text-3xl md:text-5xl font-black tracking-widest uppercase font-mono text-white drop-shadow-xl">
-                PUBLIC INTEL NEWS INCOMING
+              <div className="text-xl sm:text-2xl md:text-4xl font-black tracking-wider uppercase font-mono text-white drop-shadow-xl px-2">
+                PUBLIC INTEL TELEVISION BROADCAST INCOMING
               </div>
               <p className="text-slate-400 text-xs sm:text-sm font-mono mt-2">
                 TRANSMISSION RADAR // STANDBY FOR SATELLITE DISPATCH
@@ -128,8 +128,8 @@ export default function TelevisionPage() {
                     <span className="text-slate-400">{tv.duration}</span>
                   </div>
                   <div className="text-center my-auto py-1">
-                    <div className="text-[10px] font-black uppercase tracking-wider text-white font-mono leading-tight">
-                      PUBLIC INTEL<br/>NEWS INCOMING
+                    <div className="text-[9.5px] font-black uppercase tracking-wider text-white font-mono leading-tight">
+                      PI-TV BROADCAST<br/>NEWS INCOMING
                     </div>
                   </div>
                   <div className="text-[8px] font-mono text-slate-500 border-t border-slate-800 pt-1">

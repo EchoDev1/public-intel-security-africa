@@ -60,8 +60,8 @@ export default function PhotoGallerySection() {
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
                   <span>FIELD PHOTO ARCHIVE</span>
                 </div>
-                <div className="text-sm sm:text-base font-black tracking-widest uppercase font-mono text-white group-hover:text-amber-400 transition-colors drop-shadow-md">
-                  PUBLIC INTEL NEWS INCOMING
+                <div className="text-xs sm:text-sm font-black tracking-wider uppercase font-mono text-white group-hover:text-amber-400 transition-colors drop-shadow-md px-1">
+                  CONTINENTAL PHOTO ARCHIVE & FIELD LENS INCOMING
                 </div>
                 <span className="text-[9px] font-mono text-slate-400 mt-1 block">FIELD DISPATCH PENDING</span>
               </div>
