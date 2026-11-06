@@ -283,17 +283,19 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleDeleteArticle = async (articleId) => {
+  const handleDeleteArticle = async (articleId, articleSlug) => {
     if (!window.confirm("Are you sure you want to delete this article?")) return;
     try {
-      const res = await fetch(`/api/articles?id=${articleId}`, { method: 'DELETE' });
+      const targetId = articleId || articleSlug;
+      const targetSlug = articleSlug || articleId;
+      const res = await fetch(`/api/articles?id=${encodeURIComponent(targetId)}&slug=${encodeURIComponent(targetSlug)}`, { method: 'DELETE' });
       const data = await res.json();
       if (data?.success) {
         showToast("Article deleted successfully.");
         fetchLiveArticles();
       }
     } catch (_) {
-      setArticlesList(prev => prev.filter(a => a.id !== articleId));
+      setArticlesList(prev => prev.filter(a => a.id !== articleId && a.slug !== articleSlug));
     }
   };
 
@@ -2354,7 +2356,7 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                             </button>
 
                             <button
-                              onClick={() => handleDeleteArticle(art.id)}
+                              onClick={() => handleDeleteArticle(art.id, art.slug)}
                               className="text-red-500 hover:text-red-700 font-bold flex items-center gap-0.5"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -2421,7 +2423,7 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                     role: newArticle.authorRole || 'Executive Director & Chief Editor',
                     avatar: ''
                   },
-                  coverImage: articlePhotoPreview || newArticle.coverImage || '',
+                  coverImage: articlePhotoPreview || newArticle.coverImage || 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1200&q=80',
                   coverCaption: newArticle.coverCaption || 'Public Intel Security Africa field lens.',
                   videoUrl: articleVideoPreview || newArticle.videoUrl || '',
                   videoCaption: newArticle.videoCaption || '',
@@ -6362,7 +6364,7 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                 e.preventDefault();
                 const updated = {
                   ...editingArticle,
-                  coverImage: editArticlePhotoPreview || editingArticle.coverImage,
+                  coverImage: editArticlePhotoPreview || editingArticle.coverImage || 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1200&q=80',
                   videoUrl: editArticleVideoPreview || editingArticle.videoUrl,
                   audioUrl: editArticleAudioPreview || editingArticle.audioUrl,
                   categoryName: CATEGORIES.find(c => c.slug === editingArticle.categorySlug)?.name || editingArticle.categoryName || 'National Security'

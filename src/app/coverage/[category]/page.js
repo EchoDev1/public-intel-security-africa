@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { Shield, ArrowLeft, Globe, Filter } from 'lucide-react';
 import { getCategoryBySlug, CATEGORIES } from '@/lib/data/categories';
 import { getArticlesByCategory, ARTICLES } from '@/lib/data/articles';
+import { getLiveArticlesCollection } from '@/lib/articles/manager';
 import ArticleCard from '@/components/ArticleCard';
 import JsonLd from '@/components/seo/JsonLd';
 import { SITE_CONFIG } from '@/lib/config/site';
@@ -76,9 +77,10 @@ export default async function CategoryDetailPage({ params }) {
     notFound();
   }
 
-  let categoryArticles = getArticlesByCategory(categorySlug);
+  const allArticles = await getLiveArticlesCollection();
+  let categoryArticles = allArticles.filter(art => art.categorySlug === categorySlug);
   if (categoryArticles.length === 0) {
-    categoryArticles = ARTICLES.slice(0, 3).map((art, idx) => ({
+    categoryArticles = allArticles.slice(0, 3).map((art, idx) => ({
       ...art,
       id: `${category.slug}-mock-${idx}`,
       categorySlug: category.slug,

@@ -94,6 +94,7 @@ export async function DELETE(request) {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
     const id = searchParams.get('id');
+    const slug = searchParams.get('slug');
 
     if (action === 'purge_dummy') {
       const res = await purgeAllDummyArticles();
@@ -108,8 +109,9 @@ export async function DELETE(request) {
       });
     }
 
-    if (id) {
-      const res = await deleteArticle(id);
+    if (id || slug) {
+      if (id) await deleteArticle(id);
+      if (slug && slug !== id) await deleteArticle(slug);
       revalidateAllArticlePaths();
       const articles = await getLiveArticlesCollection();
       const realArticles = await getRealArticles();
@@ -119,7 +121,7 @@ export async function DELETE(request) {
         articles,
         realCount: realArticles.length,
         isDummyPurged: Boolean(meta?.isDummyPurged),
-        message: `Article ${id} deleted successfully.`
+        message: `Article ${id || slug} deleted successfully.`
       });
     }
 

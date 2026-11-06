@@ -1,4 +1,4 @@
-import { computeArticles } from '@/lib/data/articles';
+import { getLiveArticlesCollection } from '@/lib/articles/manager';
 import { CATEGORIES } from '@/lib/data/categories';
 import { SITE_CONFIG } from '@/lib/config/site';
 
@@ -7,7 +7,7 @@ import { SITE_CONFIG } from '@/lib/config/site';
  */
 export default async function sitemap() {
   const baseUrl = SITE_CONFIG.url;
-  const articles = computeArticles();
+  const articles = await getLiveArticlesCollection();
 
   // 1. Core institutional & static media pages
   const staticRoutes = [

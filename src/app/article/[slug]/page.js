@@ -13,7 +13,7 @@ import {
   Play,
   Headphones
 } from 'lucide-react';
-import { ARTICLES, getArticleBySlug } from '@/lib/data/articles';
+import { ARTICLES, getArticleBySlug, getArticleBySlugDirect } from '@/lib/data/articles';
 import { getLiveArticlesCollection } from '@/lib/articles/manager';
 
 export const dynamic = 'force-dynamic';
@@ -26,14 +26,13 @@ import JsonLd from '@/components/seo/JsonLd';
 import { SITE_CONFIG } from '@/lib/config/site';
 import { getSectionIncomingTitle } from '@/lib/utils/sectionBanners';
 
-export function generateStaticParams() {
-  return ARTICLES.map((art) => ({ slug: art.slug }));
-}
-
 export async function generateMetadata({ params }) {
   const { slug } = await params;
   const decodedSlug = decodeURIComponent(String(slug || '')).trim().toLowerCase();
-  let article = getArticleBySlug(slug) || getArticleBySlug(decodedSlug);
+  let article = await getArticleBySlugDirect(slug) || await getArticleBySlugDirect(decodedSlug);
+  if (!article) {
+    article = getArticleBySlug(slug) || getArticleBySlug(decodedSlug);
+  }
   if (!article) {
     try {
       const liveList = await getLiveArticlesCollection();
@@ -103,7 +102,10 @@ export async function generateMetadata({ params }) {
 export default async function ArticlePage({ params }) {
   const { slug } = await params;
   const decodedSlug = decodeURIComponent(String(slug || '')).trim().toLowerCase();
-  let article = getArticleBySlug(slug) || getArticleBySlug(decodedSlug);
+  let article = await getArticleBySlugDirect(slug) || await getArticleBySlugDirect(decodedSlug);
+  if (!article) {
+    article = getArticleBySlug(slug) || getArticleBySlug(decodedSlug);
+  }
   if (!article) {
     try {
       const liveList = await getLiveArticlesCollection();

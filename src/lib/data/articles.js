@@ -1,7 +1,7 @@
 import { SEED_ARTICLES } from './articlesSeed';
-import { getInMemoryRealArticles, getArticlesMeta } from '../articles/manager';
+import { getInMemoryRealArticles, getArticlesMeta, getArticleBySlugDirect } from '../articles/manager';
 
-export { SEED_ARTICLES };
+export { SEED_ARTICLES, getArticleBySlugDirect };
 
 function getNodeFs() {
   if (typeof window === 'undefined') {

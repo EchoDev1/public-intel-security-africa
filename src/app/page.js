@@ -23,8 +23,22 @@ export const revalidate = 0;
 
 export default async function HomePage() {
   const articles = await getLiveArticlesCollection();
-  let specialReports = articles.filter(art => art.isSpecialReport);
-  if (!specialReports || specialReports.length === 0) {
+  const realArticles = articles.filter(a => a.isRealUpload);
+
+  // Special Reports / Featured investigations grid:
+  // Real articles get priority so they appear prominently right beneath Hero
+  let specialReports = [];
+  if (realArticles.length > 0) {
+    const realSpecial = realArticles.filter(a => a.isSpecialReport);
+    const otherReal = realArticles.filter(a => !a.isSpecialReport);
+    specialReports = [...realSpecial, ...otherReal];
+  }
+  if (specialReports.length < 3) {
+    const dummySpecial = articles.filter(a => !a.isRealUpload && a.isSpecialReport);
+    const remaining = dummySpecial.slice(0, 3 - specialReports.length);
+    specialReports = [...specialReports, ...remaining];
+  }
+  if (specialReports.length === 0) {
     specialReports = articles.slice(0, 3);
   }
 

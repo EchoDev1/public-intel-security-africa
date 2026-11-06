@@ -273,7 +273,7 @@ export default function HeroFeatured({ initialArticles = [] }) {
   useEffect(() => {
     // 1. Fetch live articles from API on mount
     let isMounted = true;
-    fetch('/api/articles')
+    fetch('/api/articles', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (!isMounted || !data?.articles) return;
@@ -345,25 +345,38 @@ export default function HeroFeatured({ initialArticles = [] }) {
     return () => window.removeEventListener('pi_saved_articles_updated', updateSaved);
   }, [user?.email]);
 
+  // Separate real uploads vs dummy seed stories
+  const realStories = useMemo(() => {
+    return stories.filter((s) => s.isRealUpload);
+  }, [stories]);
+
+  const hasRealStories = realStories.length > 0;
+
+  // The pool of stories for the main featured hero card:
+  // - If real stories exist: rotate ONLY between real stories (if > 1).
+  //   DUMMY STORIES NEVER DISPLACE OR REPLACE REAL ARTICLES IN THE LEAD FEATURE SPOT.
+  // - If no real stories exist yet: rotate through the default seed stories.
+  const featuredPool = hasRealStories ? realStories : stories;
+
   // Auto-rotate stories smoothly unless user hovers
   useEffect(() => {
-    if (!isAutoPlaying || stories.length <= 1) return;
+    if (!isAutoPlaying || featuredPool.length <= 1) return;
 
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % stories.length);
+      setCurrentIndex((prev) => (prev + 1) % featuredPool.length);
     }, 8000);
 
     return () => clearInterval(interval);
-  }, [isAutoPlaying, stories.length]);
+  }, [isAutoPlaying, featuredPool.length]);
 
   const nextStory = () => {
-    if (stories.length <= 1) return;
-    setCurrentIndex((prev) => (prev + 1) % stories.length);
+    if (featuredPool.length <= 1) return;
+    setCurrentIndex((prev) => (prev + 1) % featuredPool.length);
   };
 
   const prevStory = () => {
-    if (stories.length <= 1) return;
-    setCurrentIndex((prev) => (prev - 1 + stories.length) % stories.length);
+    if (featuredPool.length <= 1) return;
+    setCurrentIndex((prev) => (prev - 1 + featuredPool.length) % featuredPool.length);
   };
 
   const toggleSave = (story, e) => {
@@ -407,10 +420,10 @@ export default function HeroFeatured({ initialArticles = [] }) {
     } catch (_) {}
   };
 
-  const safeIndex = currentIndex >= stories.length ? 0 : currentIndex;
-  const activeStory = stories[safeIndex] || stories[0] || SEED_HERO_STORIES[0];
+  const safeIndex = currentIndex >= featuredPool.length ? 0 : currentIndex;
+  const activeStory = featuredPool[safeIndex] || stories[0] || SEED_HERO_STORIES[0];
   // Up to 4 other trending stories in side queue
-  const sideQueue = stories.filter((_, idx) => idx !== safeIndex).slice(0, 4);
+  const sideQueue = stories.filter((s) => s.id !== activeStory.id && s.slug !== activeStory.slug).slice(0, 4);
 
   return (
     <section 
@@ -620,7 +633,7 @@ export default function HeroFeatured({ initialArticles = [] }) {
               </button>
 
               <span className="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400 px-1">
-                {safeIndex + 1}/{stories.length}
+                {safeIndex + 1}/{featuredPool.length}
               </span>
 
               <button

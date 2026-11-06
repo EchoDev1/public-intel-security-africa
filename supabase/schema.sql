@@ -45,18 +45,21 @@ CREATE TABLE IF NOT EXISTS public.articles (
     subtitle TEXT,
     excerpt TEXT NOT NULL,
     content TEXT NOT NULL,
-    category_slug VARCHAR(100) REFERENCES public.categories(slug) ON UPDATE CASCADE ON DELETE SET NULL,
+    category_slug VARCHAR(100),
     category_name VARCHAR(150) NOT NULL,
     author_name VARCHAR(150) NOT NULL DEFAULT 'Lady Dakore Ekpendu',
     author_role VARCHAR(150) DEFAULT 'Executive Director & Chief Editor',
     author_avatar VARCHAR(500) DEFAULT 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
     -- Photo Media Room
-    cover_image VARCHAR(500) NOT NULL,
+    cover_image TEXT DEFAULT 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1200&q=80',
     cover_caption TEXT DEFAULT 'Dispatch photo: Public Intel Security Africa field lens.',
     gallery_images JSONB DEFAULT '[]'::jsonb,
     -- Video Media Room (permits uploaded video files & streaming links)
     video_url VARCHAR(500),
     video_caption TEXT,
+    -- Audio Media Room (audio briefings & podcasts)
+    audio_url TEXT,
+    audio_caption TEXT,
     threat_level VARCHAR(30) DEFAULT 'Guarded' CHECK (threat_level IN ('Critical', 'Elevated', 'Guarded', 'Low', 'Advisory')),
     region VARCHAR(100) NOT NULL DEFAULT 'Pan-African',
     country VARCHAR(100),
