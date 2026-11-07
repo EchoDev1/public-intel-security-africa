@@ -77,15 +77,17 @@ export function computeArticles() {
         }
       }
 
+      const deletedIds = Array.isArray(meta.deletedDummyIds) ? meta.deletedDummyIds : [];
+      const cleanReal = realArticles.filter(a => !deletedIds.includes(a.id) && !deletedIds.includes(a.slug));
+
       if (meta.isDummyPurged) {
-        return realArticles;
+        return cleanReal;
       }
 
-      const deletedIds = Array.isArray(meta.deletedDummyIds) ? meta.deletedDummyIds : [];
-      const availableDummy = SEED_ARTICLES.filter(a => !deletedIds.includes(a.id));
+      const availableDummy = SEED_ARTICLES.filter(a => !deletedIds.includes(a.id) && !deletedIds.includes(a.slug));
       // For each real article uploaded, 1 dummy article automatically disappears from the end
-      const remainingDummy = availableDummy.slice(realArticles.length);
-      return [...realArticles, ...remainingDummy];
+      const remainingDummy = availableDummy.slice(cleanReal.length);
+      return [...cleanReal, ...remainingDummy];
     } catch (_) {}
   }
 
@@ -97,15 +99,16 @@ export function computeArticles() {
 
       const meta = metaRaw ? JSON.parse(metaRaw) : { isDummyPurged: false, deletedDummyIds: [] };
       const realArticles = realRaw ? JSON.parse(realRaw) : [];
+      const deletedIds = Array.isArray(meta.deletedDummyIds) ? meta.deletedDummyIds : [];
+      const cleanReal = realArticles.filter(a => !deletedIds.includes(a.id) && !deletedIds.includes(a.slug));
 
       if (meta.isDummyPurged) {
-        return realArticles;
+        return cleanReal;
       }
 
-      const deletedIds = Array.isArray(meta.deletedDummyIds) ? meta.deletedDummyIds : [];
-      const availableDummy = SEED_ARTICLES.filter(a => !deletedIds.includes(a.id));
-      const remainingDummy = availableDummy.slice(realArticles.length);
-      return [...realArticles, ...remainingDummy];
+      const availableDummy = SEED_ARTICLES.filter(a => !deletedIds.includes(a.id) && !deletedIds.includes(a.slug));
+      const remainingDummy = availableDummy.slice(cleanReal.length);
+      return [...cleanReal, ...remainingDummy];
     } catch (_) {}
   }
 
@@ -131,19 +134,12 @@ export function getArticleBySlug(slug) {
   if (!slug) return null;
   const decoded = decodeURIComponent(String(slug)).trim().toLowerCase();
   const all = computeArticles();
-  const found = all.find(art => 
+  return all.find(art => 
     (art.slug && art.slug.toLowerCase() === decoded) || 
     (art.id && art.id.toLowerCase() === decoded) ||
     art.slug === slug ||
     art.id === slug
-  );
-  if (found) return found;
-  return SEED_ARTICLES.find(art => 
-    (art.slug && art.slug.toLowerCase() === decoded) || 
-    (art.id && art.id.toLowerCase() === decoded) ||
-    art.slug === slug ||
-    art.id === slug
-  );
+  ) || null;
 }
 
 export function getArticlesByCategory(categorySlug) {

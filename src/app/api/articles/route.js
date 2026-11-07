@@ -35,7 +35,8 @@ export async function GET() {
       articles,
       realCount: realArticles.length,
       dummyCount: meta?.isDummyPurged ? 0 : Math.max(0, articles.length - realArticles.length),
-      isDummyPurged: Boolean(meta?.isDummyPurged)
+      isDummyPurged: Boolean(meta?.isDummyPurged),
+      deletedDummyIds: meta?.deletedDummyIds || []
     }, {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
@@ -74,6 +75,7 @@ export async function POST(request) {
       articles,
       realCount: realArticles.length,
       isDummyPurged: Boolean(meta?.isDummyPurged),
+      deletedDummyIds: meta?.deletedDummyIds || [],
       message: `Article "${saved.title}" published live.`
     }, {
       headers: {
@@ -110,8 +112,7 @@ export async function DELETE(request) {
     }
 
     if (id || slug) {
-      if (id) await deleteArticle(id);
-      if (slug && slug !== id) await deleteArticle(slug);
+      await deleteArticle(id, slug);
       revalidateAllArticlePaths();
       const articles = await getLiveArticlesCollection();
       const realArticles = await getRealArticles();
@@ -121,6 +122,7 @@ export async function DELETE(request) {
         articles,
         realCount: realArticles.length,
         isDummyPurged: Boolean(meta?.isDummyPurged),
+        deletedDummyIds: meta?.deletedDummyIds || [],
         message: `Article ${id || slug} deleted successfully.`
       });
     }

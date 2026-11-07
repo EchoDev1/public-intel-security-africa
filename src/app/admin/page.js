@@ -73,6 +73,7 @@ import { CATEGORIES, SPECIALIZED_HUBS } from '@/lib/data/categories';
 import { ARTICLES } from '@/lib/data/articles';
 import { INITIAL_EYEWITNESS_REPORTS } from '@/lib/data/eyewitness';
 import { TELEVISION_SHOWS, PODCAST_EPISODES, WEBINARS, RADIO_STREAM } from '@/lib/data/multimedia';
+import { parseVideoUrl } from '@/lib/utils/videoEmbed';
 import { TRAINING_COURSES } from '@/lib/data/training';
 import { WOMEN_IN_SECURITY_PROFILES } from '@/lib/data/womenInSecurity';
 import { CONTINENTAL_THREAT_INDEX } from '@/lib/data/threatRadar';
@@ -180,9 +181,15 @@ export default function AdminDashboardPage() {
         try {
           const realOnly = data.articles.filter(a => a.isRealUpload);
           localStorage.setItem('pisa_custom_articles', JSON.stringify(realOnly));
+          const existingMetaRaw = localStorage.getItem('pisa_articles_meta');
+          const existingMeta = existingMetaRaw ? JSON.parse(existingMetaRaw) : {};
+          const mergedDeleted = Array.from(new Set([
+            ...(existingMeta.deletedDummyIds || []),
+            ...(data.deletedDummyIds || [])
+          ]));
           localStorage.setItem('pisa_articles_meta', JSON.stringify({
             isDummyPurged: Boolean(data.isDummyPurged),
-            deletedDummyIds: []
+            deletedDummyIds: mergedDeleted
           }));
           window.dispatchEvent(new CustomEvent('pisa_articles_updated', {
             detail: { articles: data.articles, isDummyPurged: Boolean(data.isDummyPurged) }
@@ -271,6 +278,9 @@ export default function AdminDashboardPage() {
     if (!window.confirm("Are you sure you want to permanently delete all sample/dummy news articles? Only real uploaded articles will remain on the platform.")) {
       return;
     }
+    // Optimistic purge update
+    setIsDummyPurged(true);
+    setArticlesList(prev => prev.filter(a => a.isRealUpload));
     try {
       const res = await fetch('/api/articles?action=purge_dummy', { method: 'DELETE' });
       const data = await res.json();
@@ -285,18 +295,54 @@ export default function AdminDashboardPage() {
 
   const handleDeleteArticle = async (articleId, articleSlug) => {
     if (!window.confirm("Are you sure you want to delete this article?")) return;
+    const targetId = articleId || articleSlug;
+    const targetSlug = articleSlug || articleId;
+
+    // 1. Instant optimistic local UI removal: zero lag!
+    setArticlesList(prev => prev.filter(a => 
+      a.id !== targetId && a.slug !== targetSlug && a.id !== targetSlug && a.slug !== targetId
+    ));
+    setRealArticlesCount(prev => Math.max(0, prev - 1));
+
+    // 2. Instant client localStorage sync and broadcast across tabs
     try {
-      const targetId = articleId || articleSlug;
-      const targetSlug = articleSlug || articleId;
+      const raw = localStorage.getItem('pisa_custom_articles');
+      if (raw) {
+        const list = JSON.parse(raw);
+        const filtered = list.filter(a => 
+          a.id !== targetId && a.slug !== targetSlug && a.id !== targetSlug && a.slug !== targetId
+        );
+        localStorage.setItem('pisa_custom_articles', JSON.stringify(filtered));
+      }
+      const metaRaw = localStorage.getItem('pisa_articles_meta');
+      const meta = metaRaw ? JSON.parse(metaRaw) : { isDummyPurged: false, deletedDummyIds: [] };
+      if (!Array.isArray(meta.deletedDummyIds)) meta.deletedDummyIds = [];
+      if (targetId && !meta.deletedDummyIds.includes(targetId)) meta.deletedDummyIds.push(targetId);
+      if (targetSlug && !meta.deletedDummyIds.includes(targetSlug)) meta.deletedDummyIds.push(targetSlug);
+      localStorage.setItem('pisa_articles_meta', JSON.stringify(meta));
+
+      window.dispatchEvent(new CustomEvent('pisa_articles_updated', {
+        detail: { deletedId: targetId, deletedSlug: targetSlug }
+      }));
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('pisa_articles_channel');
+        bc.postMessage({ deletedId: targetId, deletedSlug: targetSlug });
+        bc.close();
+      }
+    } catch (_) {}
+
+    showToast("Article deleted permanently.");
+
+    // 3. Network delete to database & server
+    try {
       const res = await fetch(`/api/articles?id=${encodeURIComponent(targetId)}&slug=${encodeURIComponent(targetSlug)}`, { method: 'DELETE' });
       const data = await res.json();
       if (data?.success) {
-        showToast("Article deleted successfully.");
+        fetchLiveArticles();
+      } else {
         fetchLiveArticles();
       }
-    } catch (_) {
-      setArticlesList(prev => prev.filter(a => a.id !== articleId && a.slug !== articleSlug));
-    }
+    } catch (_) {}
   };
 
   // Form State: Write New Article / Special Report
@@ -2655,41 +2701,85 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                     )}
                   </div>
 
-                  {/* 2. Video Attachment */}
+                  {/* 2. Video Dispatch Attachment (Responsive Preview for YouTube, Shorts, Vimeo & MP4) */}
                   <div className="space-y-2 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                    <label className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                      <Video className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Video Dispatch (YouTube/MP4)</span>
+                    <label className="font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1">
+                        <Video className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Video Dispatch (YouTube / Shorts / MP4)</span>
+                      </span>
+                      {(articleVideoPreview || newArticle.videoUrl) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setArticleVideoPreview(null);
+                            setNewArticle(prev => ({ ...prev, videoUrl: '' }));
+                          }}
+                          className="text-[10px] text-red-500 hover:text-red-700 font-bold flex items-center gap-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                          <span>Clear Video</span>
+                        </button>
+                      )}
                     </label>
                     <input
                       type="text"
-                      placeholder="https://youtube.com/watch?v=..."
+                      placeholder="https://youtube.com/watch?v=... or https://youtube.com/shorts/..."
                       value={newArticle.videoUrl}
-                      onChange={(e) => setNewArticle({ ...newArticle, videoUrl: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewArticle(prev => ({ ...prev, videoUrl: val }));
+                        if (val) setArticleVideoPreview(val);
+                      }}
                       className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px]"
                     />
-                    <label className="cursor-pointer block py-2 px-3 rounded-xl bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 text-blue-900 dark:text-blue-200 text-center font-bold border border-blue-300 dark:border-blue-700 transition-colors">
+                    <label className="cursor-pointer block py-2 px-3 rounded-xl bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 text-blue-900 dark:text-blue-200 text-center font-bold border border-blue-300 dark:border-blue-700 transition-colors text-xs">
                       <span>🎥 Choose Video from Device</span>
                       <input
                         type="file"
                         accept="video/*"
                         className="hidden"
-                        onChange={(e) => handleVideoUpload(e, setArticleVideoPreview, null)}
+                        onChange={(e) => handleVideoUpload(e, setArticleVideoPreview, (url) => setNewArticle(prev => ({ ...prev, videoUrl: url })))}
                       />
                     </label>
-                    {articleVideoPreview && (
-                      <div className="relative h-28 rounded-xl overflow-hidden bg-black flex items-center justify-center border border-blue-500">
-                        <video src={articleVideoPreview} controls className="w-full h-full object-contain" />
-                        <button
-                          type="button"
-                          onClick={() => setArticleVideoPreview(null)}
-                          className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white hover:bg-red-600 transition-colors"
-                          title="Remove video"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
+
+                    {(articleVideoPreview || newArticle.videoUrl) && (() => {
+                      const activeVideoUrl = articleVideoPreview || newArticle.videoUrl;
+                      const parsed = parseVideoUrl(activeVideoUrl);
+                      if (!parsed) return null;
+                      return (
+                        <div className="space-y-1 pt-1">
+                          <div className="flex items-center justify-between text-[10px] font-mono text-blue-600 dark:text-blue-400">
+                            <span>LIVE PREVIEW ({parsed.type.toUpperCase()})</span>
+                            <span className="text-slate-400">Responsive 16:9 Viewport</span>
+                          </div>
+                          <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black flex items-center justify-center border-2 border-blue-500 shadow-md">
+                            {parsed.isEmbed ? (
+                              <iframe
+                                src={parsed.src}
+                                title="Video Dispatch Preview"
+                                className="w-full h-full border-0 pointer-events-auto"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                              />
+                            ) : (
+                              <video src={parsed.src} controls className="w-full h-full object-contain" />
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setArticleVideoPreview(null);
+                                setNewArticle(prev => ({ ...prev, videoUrl: '' }));
+                              }}
+                              className="absolute top-2 right-2 p-1.5 rounded-full bg-black/80 text-white hover:bg-red-600 transition-colors shadow-lg z-10"
+                              title="Remove video"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* 3. Audio Briefing Attachment */}
@@ -2711,7 +2801,7 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                         type="file"
                         accept="audio/*"
                         className="hidden"
-                        onChange={(e) => handleAudioUpload(e, setArticleAudioPreview, null)}
+                        onChange={(e) => handleAudioUpload(e, setArticleAudioPreview, (url) => setNewArticle(prev => ({ ...prev, audioUrl: url })))}
                       />
                     </label>
                     {articleAudioPreview && (
@@ -6365,10 +6455,39 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                 const updated = {
                   ...editingArticle,
                   coverImage: editArticlePhotoPreview || editingArticle.coverImage || 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1200&q=80',
-                  videoUrl: editArticleVideoPreview || editingArticle.videoUrl,
-                  audioUrl: editArticleAudioPreview || editingArticle.audioUrl,
+                  videoUrl: editArticleVideoPreview || editingArticle.videoUrl || '',
+                  audioUrl: editArticleAudioPreview || editingArticle.audioUrl || '',
                   categoryName: CATEGORIES.find(c => c.slug === editingArticle.categorySlug)?.name || editingArticle.categoryName || 'National Security'
                 };
+
+                // 1. Instant optimistic state update: zero lag!
+                setArticlesList(prev => prev.map(a => (a.id === updated.id || a.slug === updated.slug) ? { ...a, ...updated } : a));
+                
+                // 2. Instant localStorage & broadcast update
+                try {
+                  const raw = localStorage.getItem('pisa_custom_articles');
+                  if (raw) {
+                    const list = JSON.parse(raw);
+                    const exists = list.some(a => a.id === updated.id || a.slug === updated.slug);
+                    const nextList = exists
+                      ? list.map(a => (a.id === updated.id || a.slug === updated.slug) ? { ...a, ...updated } : a)
+                      : [updated, ...list];
+                    localStorage.setItem('pisa_custom_articles', JSON.stringify(nextList));
+                  }
+                  window.dispatchEvent(new CustomEvent('pisa_articles_updated', {
+                    detail: { updatedArticle: updated }
+                  }));
+                  if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+                    const bc = new BroadcastChannel('pisa_articles_channel');
+                    bc.postMessage({ updatedArticle: updated });
+                    bc.close();
+                  }
+                } catch (_) {}
+
+                setEditingArticle(null);
+                showToast(`Article "${updated.title}" updated.`);
+
+                // 3. Network call to server & Supabase cloud database
                 try {
                   const res = await fetch('/api/articles', {
                     method: 'POST',
@@ -6377,17 +6496,13 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                   });
                   const data = await res.json();
                   if (data?.success) {
-                    showToast(`Article "${updated.title}" updated live!`);
                     fetchLiveArticles();
                   } else {
-                    setArticlesList(articlesList.map(a => a.id === updated.id ? updated : a));
-                    showToast(`Article updated.`);
+                    fetchLiveArticles();
                   }
                 } catch (_) {
-                  setArticlesList(articlesList.map(a => a.id === updated.id ? updated : a));
-                  showToast(`Article updated.`);
+                  fetchLiveArticles();
                 }
-                setEditingArticle(null);
               }}
               className="space-y-4 text-xs"
             >
@@ -6483,22 +6598,73 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-700 dark:text-slate-300">Video Embed URL</label>
+                  <label className="font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                    <span>Video Dispatch URL (YouTube/Shorts/MP4)</span>
+                    {(editArticleVideoPreview || editingArticle.videoUrl) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditArticleVideoPreview(null);
+                          setEditingArticle(prev => ({ ...prev, videoUrl: '' }));
+                        }}
+                        className="text-[10px] text-red-500 hover:text-red-700 font-bold flex items-center gap-0.5"
+                      >
+                        <X className="w-3 h-3" />
+                        <span>Clear Video</span>
+                      </button>
+                    )}
+                  </label>
                   <input
                     type="text"
                     value={editingArticle.videoUrl || ''}
-                    onChange={(e) => setEditingArticle({ ...editingArticle, videoUrl: e.target.value })}
+                    placeholder="https://youtube.com/watch?v=... or https://youtube.com/shorts/..."
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setEditingArticle({ ...editingArticle, videoUrl: val });
+                      if (val) setEditArticleVideoPreview(val);
+                    }}
                     className="w-full px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px]"
                   />
-                  <label className="cursor-pointer block py-1.5 px-3 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-900 dark:text-blue-200 text-center font-bold border border-blue-200">
-                    <span>🎥 Replace Video</span>
+                  <label className="cursor-pointer block py-1.5 px-3 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-900 dark:text-blue-200 text-center font-bold border border-blue-200 hover:bg-blue-100 transition-colors">
+                    <span>🎥 Replace Video from Device</span>
                     <input
                       type="file"
                       accept="video/*"
                       className="hidden"
-                      onChange={(e) => handleVideoUpload(e, setEditArticleVideoPreview, null)}
+                      onChange={(e) => handleVideoUpload(e, setEditArticleVideoPreview, (url) => setEditingArticle(prev => ({ ...prev, videoUrl: url })))}
                     />
                   </label>
+                  {(editArticleVideoPreview || editingArticle.videoUrl) && (() => {
+                    const activeVideo = editArticleVideoPreview || editingArticle.videoUrl;
+                    const parsed = parseVideoUrl(activeVideo);
+                    if (!parsed) return null;
+                    return (
+                      <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black flex items-center justify-center border-2 border-blue-500 shadow-md mt-2">
+                        {parsed.isEmbed ? (
+                          <iframe
+                            src={parsed.src}
+                            title="Edit Video Preview"
+                            className="w-full h-full border-0 pointer-events-auto"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          />
+                        ) : (
+                          <video src={parsed.src} controls className="w-full h-full object-contain" />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditArticleVideoPreview(null);
+                            setEditingArticle(prev => ({ ...prev, videoUrl: '' }));
+                          }}
+                          className="absolute top-2 right-2 p-1.5 rounded-full bg-black/80 text-white hover:bg-red-600 transition-colors shadow-lg z-10"
+                          title="Remove video"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="space-y-1">
@@ -6509,13 +6675,13 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                     onChange={(e) => setEditingArticle({ ...editingArticle, audioUrl: e.target.value })}
                     className="w-full px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px]"
                   />
-                  <label className="cursor-pointer block py-1.5 px-3 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-200 text-center font-bold border border-emerald-200">
+                  <label className="cursor-pointer block py-1.5 px-3 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-200 text-center font-bold border border-emerald-200 hover:bg-emerald-100 transition-colors">
                     <span>🎙️ Replace Audio</span>
                     <input
                       type="file"
                       accept="audio/*"
                       className="hidden"
-                      onChange={(e) => handleAudioUpload(e, setEditArticleAudioPreview, null)}
+                      onChange={(e) => handleAudioUpload(e, setEditArticleAudioPreview, (url) => setEditingArticle(prev => ({ ...prev, audioUrl: url })))}
                     />
                   </label>
                 </div>

@@ -185,9 +185,44 @@ export function getInMemoryRealArticles() {
 
 /**
  * Get Real (Admin Uploaded / Edited) Articles from Supabase, local file, and memory
+ * When Supabase is configured, it acts as the primary authoritative source of truth.
  */
 export async function getRealArticles() {
   ensureStorage();
+  const meta = getArticlesMeta();
+  const deletedIds = Array.isArray(meta?.deletedDummyIds) ? meta.deletedDummyIds : [];
+
+  // 1. Supabase Cloud Database (Primary authoritative source of truth)
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createServerSupabaseClient();
+      const { data, error } = await withTimeout(
+        supabase.from('articles').select('*').order('published_at', { ascending: false }),
+        10000
+      );
+      if (!error && Array.isArray(data)) {
+        // Cloud is authoritative: exactly these rows exist, plus filter out explicitly deleted ids/slugs
+        const cloudArticles = data
+          .map(mapSupabaseRow)
+          .filter(a => !deletedIds.includes(a.id) && !deletedIds.includes(a.slug));
+        
+        memoryRealArticles = cloudArticles;
+
+        // Keep local cache in sync with cloud
+        try {
+          if (fs && ARTICLES_FILE) {
+            fs.writeFileSync(ARTICLES_FILE, JSON.stringify(cloudArticles, null, 2));
+          }
+        } catch (_) {}
+
+        return memoryRealArticles;
+      }
+    } catch (err) {
+      console.warn('Supabase getRealArticles warning, falling back to local cache:', err?.message || err);
+    }
+  }
+
+  // 2. Offline / Fallback mode: combine local file and memory
   let localArticles = [];
   try {
     if (fs && fs.existsSync(ARTICLES_FILE)) {
@@ -196,35 +231,21 @@ export async function getRealArticles() {
   } catch (_) {}
 
   const combinedMap = new Map();
-  // 1. Local file articles
-  localArticles.forEach(a => combinedMap.set(a.slug || a.id, { ...a, isRealUpload: true }));
-  // 2. In-memory articles
-  memoryRealArticles.forEach(a => combinedMap.set(a.slug || a.id, { ...a, isRealUpload: true }));
-
-  // 3. Supabase Cloud Database (Primary source of truth)
-  if (isSupabaseConfigured()) {
-    try {
-      const supabase = createServerSupabaseClient();
-      const { data, error } = await withTimeout(
-        supabase.from('articles').select('*').order('published_at', { ascending: false }),
-        10000
-      );
-      if (!error && Array.isArray(data) && data.length > 0) {
-        data.forEach(item => {
-          const mapped = mapSupabaseRow(item);
-          combinedMap.set(mapped.slug || mapped.id, mapped);
-        });
-      }
-    } catch (err) {
-      console.warn('Supabase getRealArticles warning:', err?.message || err);
+  localArticles.forEach(a => {
+    if (!deletedIds.includes(a.id) && !deletedIds.includes(a.slug)) {
+      combinedMap.set(a.slug || a.id, { ...a, isRealUpload: true });
     }
-  }
+  });
+  memoryRealArticles.forEach(a => {
+    if (!deletedIds.includes(a.id) && !deletedIds.includes(a.slug)) {
+      combinedMap.set(a.slug || a.id, { ...a, isRealUpload: true });
+    }
+  });
 
   memoryRealArticles = Array.from(combinedMap.values()).map(a => ({ ...a, isRealUpload: true }));
 
-  // Keep local file in sync if writable
   try {
-    if (fs && ARTICLES_FILE && memoryRealArticles.length > 0) {
+    if (fs && ARTICLES_FILE) {
       fs.writeFileSync(ARTICLES_FILE, JSON.stringify(memoryRealArticles, null, 2));
     }
   } catch (_) {}
@@ -235,18 +256,28 @@ export async function getRealArticles() {
 /**
  * Dedicated direct accessor for a single article by slug:
  * Queries memory, Supabase, local file, and SEED articles.
- * Guarantees zero 404s for any valid article in the database.
+ * Guarantees zero 404s for any valid article in the database, while respecting deletions.
  */
 export async function getArticleBySlugDirect(slug) {
   if (!slug) return null;
   const decoded = decodeURIComponent(String(slug)).trim().toLowerCase();
+  const raw = String(slug).trim();
+
+  // Fast check: if this slug/id was permanently deleted, return null immediately
+  const meta = await getArticlesMetaAsync();
+  const deletedIds = Array.isArray(meta?.deletedDummyIds) ? meta.deletedDummyIds : [];
+  if (deletedIds.includes(raw) || deletedIds.includes(decoded)) {
+    return null;
+  }
 
   // 1. Check in-memory real articles first
   const inMem = memoryRealArticles.find(a =>
-    (a.slug && a.slug.toLowerCase() === decoded) ||
-    (a.id && a.id.toLowerCase() === decoded) ||
-    a.slug === slug ||
-    a.id === slug
+    !deletedIds.includes(a.id) &&
+    !deletedIds.includes(a.slug) &&
+    ((a.slug && a.slug.toLowerCase() === decoded) ||
+     (a.id && a.id.toLowerCase() === decoded) ||
+     a.slug === raw ||
+     a.id === raw)
   );
   if (inMem) return inMem;
 
@@ -258,14 +289,16 @@ export async function getArticleBySlugDirect(slug) {
         supabase
           .from('articles')
           .select('*')
-          .or(`slug.eq.${slug},slug.ilike.${decoded}`)
+          .or(`slug.eq.${raw},slug.ilike.${decoded}`)
           .limit(1),
         10000
       );
       if (!error && Array.isArray(data) && data.length > 0) {
         const mapped = mapSupabaseRow(data[0]);
-        memoryRealArticles = [mapped, ...memoryRealArticles.filter(a => a.slug !== mapped.slug)];
-        return mapped;
+        if (!deletedIds.includes(mapped.id) && !deletedIds.includes(mapped.slug)) {
+          memoryRealArticles = [mapped, ...memoryRealArticles.filter(a => a.slug !== mapped.slug)];
+          return mapped;
+        }
       }
     } catch (_) {}
   }
@@ -275,10 +308,12 @@ export async function getArticleBySlugDirect(slug) {
     if (fs && fs.existsSync(ARTICLES_FILE)) {
       const list = JSON.parse(fs.readFileSync(ARTICLES_FILE, 'utf-8'));
       const found = list.find(a =>
-        (a.slug && a.slug.toLowerCase() === decoded) ||
-        (a.id && a.id.toLowerCase() === decoded) ||
-        a.slug === slug ||
-        a.id === slug
+        !deletedIds.includes(a.id) &&
+        !deletedIds.includes(a.slug) &&
+        ((a.slug && a.slug.toLowerCase() === decoded) ||
+         (a.id && a.id.toLowerCase() === decoded) ||
+         a.slug === raw ||
+         a.id === raw)
       );
       if (found) {
         const full = { ...found, isRealUpload: true };
@@ -288,12 +323,18 @@ export async function getArticleBySlugDirect(slug) {
     }
   } catch (_) {}
 
-  // 4. Check seed articles
+  // 4. Check seed dummy articles (only if not purged)
+  if (meta?.isDummyPurged) {
+    return null;
+  }
+
   return SEED_ARTICLES.find(a =>
-    (a.slug && a.slug.toLowerCase() === decoded) ||
-    (a.id && a.id.toLowerCase() === decoded) ||
-    a.slug === slug ||
-    a.id === slug
+    !deletedIds.includes(a.id) &&
+    !deletedIds.includes(a.slug) &&
+    ((a.slug && a.slug.toLowerCase() === decoded) ||
+     (a.id && a.id.toLowerCase() === decoded) ||
+     a.slug === raw ||
+     a.id === raw)
   ) || null;
 }
 
@@ -417,20 +458,40 @@ export async function saveRealArticle(article) {
 }
 
 /**
- * Delete an article (handles real, edited, and dummy seed articles cleanly)
+ * Delete an article (handles real, edited, and dummy seed articles cleanly and instantaneously)
  */
-export async function deleteArticle(articleId) {
+export async function deleteArticle(articleId, articleSlug) {
   ensureStorage();
   const meta = await getArticlesMetaAsync();
+  const id = articleId ? String(articleId).trim() : '';
+  const slug = articleSlug ? String(articleSlug).trim() : '';
 
-  // 1. Delete from in-memory cache
-  memoryRealArticles = memoryRealArticles.filter(a => a.id !== articleId && a.slug !== articleId);
+  // Find any in-memory match to capture both its id and its slug
+  const matched = memoryRealArticles.find(a => 
+    (id && (a.id === id || a.slug === id)) ||
+    (slug && (a.slug === slug || a.id === slug))
+  );
+  const targetId = matched?.id || id;
+  const targetSlug = matched?.slug || slug;
+
+  // 1. Delete from in-memory cache immediately
+  memoryRealArticles = memoryRealArticles.filter(a => 
+    a.id !== targetId && 
+    a.slug !== targetId && 
+    a.id !== targetSlug && 
+    a.slug !== targetSlug
+  );
 
   // 2. Delete from local file
   try {
     if (fs && fs.existsSync(ARTICLES_FILE)) {
       let list = JSON.parse(fs.readFileSync(ARTICLES_FILE, 'utf-8'));
-      list = list.filter(a => a.id !== articleId && a.slug !== articleId);
+      list = list.filter(a => 
+        a.id !== targetId && 
+        a.slug !== targetId && 
+        a.id !== targetSlug && 
+        a.slug !== targetSlug
+      );
       fs.writeFileSync(ARTICLES_FILE, JSON.stringify(list, null, 2));
     }
   } catch (_) {}
@@ -440,32 +501,41 @@ export async function deleteArticle(articleId) {
     try {
       const supabase = createServerSupabaseClient();
       
-      // Always delete by slug
-      await supabase.from('articles').delete().eq('slug', articleId);
+      // Delete by slug
+      if (targetSlug) {
+        await supabase.from('articles').delete().eq('slug', targetSlug);
+      }
+      if (targetId && targetId !== targetSlug) {
+        await supabase.from('articles').delete().eq('slug', targetId);
+      }
 
-      // If articleId is a valid UUID, delete by id as well
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(articleId);
-      if (isUuid) {
-        await supabase.from('articles').delete().eq('id', articleId);
+      // Delete by UUID if valid UUID
+      const isTargetIdUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetId);
+      if (isTargetIdUuid) {
+        await supabase.from('articles').delete().eq('id', targetId);
+      }
+      const isTargetSlugUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetSlug);
+      if (isTargetSlugUuid) {
+        await supabase.from('articles').delete().eq('id', targetSlug);
       }
     } catch (err) {
       console.warn('Supabase delete warning:', err?.message || err);
     }
   }
 
-  // 4. If it's a seed dummy article, record its ID and slug in deletedDummyIds permanently
-  const isSeedDummy = SEED_ARTICLES.some(a => a.id === articleId || a.slug === articleId);
-  if (isSeedDummy) {
-    if (!meta.deletedDummyIds.includes(articleId)) {
-      meta.deletedDummyIds.push(articleId);
-    }
-    const matchedSeed = SEED_ARTICLES.find(a => a.id === articleId || a.slug === articleId);
-    if (matchedSeed) {
-      if (!meta.deletedDummyIds.includes(matchedSeed.id)) meta.deletedDummyIds.push(matchedSeed.id);
-      if (!meta.deletedDummyIds.includes(matchedSeed.slug)) meta.deletedDummyIds.push(matchedSeed.slug);
-    }
-    saveArticlesMeta(meta);
+  // 4. Record targetId and targetSlug in deletedDummyIds permanently
+  if (!Array.isArray(meta.deletedDummyIds)) meta.deletedDummyIds = [];
+  if (targetId && !meta.deletedDummyIds.includes(targetId)) meta.deletedDummyIds.push(targetId);
+  if (targetSlug && !meta.deletedDummyIds.includes(targetSlug)) meta.deletedDummyIds.push(targetSlug);
+
+  const matchedSeed = SEED_ARTICLES.find(a => 
+    a.id === targetId || a.slug === targetId || a.id === targetSlug || a.slug === targetSlug
+  );
+  if (matchedSeed) {
+    if (matchedSeed.id && !meta.deletedDummyIds.includes(matchedSeed.id)) meta.deletedDummyIds.push(matchedSeed.id);
+    if (matchedSeed.slug && !meta.deletedDummyIds.includes(matchedSeed.slug)) meta.deletedDummyIds.push(matchedSeed.slug);
   }
+  saveArticlesMeta(meta);
 
   return { success: true };
 }
@@ -490,13 +560,18 @@ export async function purgeAllDummyArticles() {
  */
 export async function getLiveArticlesCollection() {
   const meta = await getArticlesMetaAsync();
-  const realArticles = await getRealArticles();
+  const deletedIds = Array.isArray(meta?.deletedDummyIds) ? meta.deletedDummyIds : [];
+  const rawRealArticles = await getRealArticles();
+
+  // Filter out any real articles that were deleted
+  const realArticles = rawRealArticles.filter(a => 
+    !deletedIds.includes(a.id) && !deletedIds.includes(a.slug)
+  );
 
   if (meta?.isDummyPurged) {
     return realArticles;
   }
 
-  const deletedIds = Array.isArray(meta?.deletedDummyIds) ? meta.deletedDummyIds : [];
   const realSlugs = new Set(realArticles.map(a => a.slug));
   const realIds = new Set(realArticles.map(a => a.id));
 

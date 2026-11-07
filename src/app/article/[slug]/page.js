@@ -25,6 +25,7 @@ import ArticleActions from './ArticleActions';
 import JsonLd from '@/components/seo/JsonLd';
 import { SITE_CONFIG } from '@/lib/config/site';
 import { getSectionIncomingTitle } from '@/lib/utils/sectionBanners';
+import { parseVideoUrl } from '@/lib/utils/videoEmbed';
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
@@ -344,32 +345,36 @@ export default async function ArticlePage({ params }) {
       </div>
 
       {/* Video Dispatch Player (if video is provided) */}
-      {article.videoUrl && (
-        <div className="p-4 sm:p-6 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
-          <div className="flex items-center justify-between text-xs text-white">
-            <span className="flex items-center gap-2 font-bold uppercase tracking-wider text-amber-400">
-              <Play className="w-4 h-4 fill-amber-400 text-amber-400" />
-              <span>Field Video Intelligence Dispatch</span>
-            </span>
-            {article.videoCaption && <span className="text-slate-400 text-xs italic">{article.videoCaption}</span>}
+      {article.videoUrl && (() => {
+        const parsedVideo = parseVideoUrl(article.videoUrl);
+        if (!parsedVideo) return null;
+        return (
+          <div className="p-4 sm:p-6 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between text-xs text-white">
+              <span className="flex items-center gap-2 font-bold uppercase tracking-wider text-amber-400">
+                <Play className="w-4 h-4 fill-amber-400 text-amber-400" />
+                <span>Field Video Intelligence Dispatch</span>
+              </span>
+              {article.videoCaption && <span className="text-slate-400 text-xs italic">{article.videoCaption}</span>}
+            </div>
+            <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black border border-slate-800 shadow-xl">
+              {parsedVideo.isEmbed ? (
+                <iframe
+                  src={parsedVideo.src}
+                  title="Video Intelligence Dispatch"
+                  className="w-full h-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              ) : (
+                <video controls src={parsedVideo.src} className="w-full h-full object-contain bg-black">
+                  Your browser does not support the video tag.
+                </video>
+              )}
+            </div>
           </div>
-          <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black border border-slate-800">
-            {article.videoUrl.includes('youtube.com') || article.videoUrl.includes('youtu.be') ? (
-              <iframe
-                src={article.videoUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
-                title="Video Dispatch"
-                className="w-full h-full border-0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            ) : (
-              <video controls src={article.videoUrl} className="w-full h-full object-cover">
-                Your browser does not support the video tag.
-              </video>
-            )}
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Audio Briefing Player (if audio is provided) */}
       {article.audioUrl && (
