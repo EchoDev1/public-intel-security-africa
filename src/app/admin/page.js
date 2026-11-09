@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   Globe,
   Tv,
+  Radio,
   Radio as RadioIcon,
   Headphones,
   Video,

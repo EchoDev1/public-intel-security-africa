@@ -456,22 +456,22 @@ export default function HeroFeatured({ initialArticles = [] }) {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/35 to-transparent"></div>
 
-                  {/* Badges Over Image */}
-                  <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex flex-wrap items-center gap-2 z-10">
-                    <span className="px-3 py-1 rounded-md bg-amber-600 text-white font-black text-[10px] sm:text-xs uppercase tracking-wider shadow-md flex items-center gap-1.5">
-                      <Flame className="w-3.5 h-3.5 text-amber-200" />
-                      <span>Official Bureau Lead Dossier</span>
-                    </span>
-                    <span className="px-2.5 py-1 rounded-md bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-slate-900 dark:text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 shadow-sm">
+                  {/* Clean Minimal Badges Over Image - Compact, sleek & Unobtrusive */}
+                  <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex items-center gap-1.5 z-10">
+                    <span className="px-2.5 py-1 rounded-md bg-slate-900/85 backdrop-blur-md text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider border border-white/20 shadow-sm">
                       {activeStory.category}
                     </span>
-                    <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono text-slate-300 bg-slate-950/80 border border-slate-800">
-                      {activeStory.featureSource}
-                    </span>
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-600/90 text-white border border-emerald-400 shadow-xs">
-                      <Sparkles className="w-2.5 h-2.5" />
-                      <span>LATEST POST</span>
-                    </span>
+                    {activeStory.isBreaking ? (
+                      <span className="px-2 py-0.5 rounded-md bg-red-600/95 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                        <Flame className="w-2.5 h-2.5 text-amber-200" />
+                        <span>BREAKING</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-600/90 text-white border border-emerald-400/60 shadow-xs">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        <span>LATEST</span>
+                      </span>
+                    )}
                   </div>
 
                   {/* Meta Overlay */}
@@ -498,14 +498,16 @@ export default function HeroFeatured({ initialArticles = [] }) {
                   <div className="absolute inset-0 bg-[linear-gradient(to_right,#eab3080c_1px,transparent_1px),linear-gradient(to_bottom,#eab3080c_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none"></div>
 
                   {/* Badges Over Card */}
-                  <div className="relative z-10 flex flex-wrap items-center gap-2">
-                    <span className="px-3 py-1 rounded-md bg-amber-600 text-white font-black text-[10px] sm:text-xs uppercase tracking-wider shadow-md flex items-center gap-1.5">
-                      <Flame className="w-3.5 h-3.5 text-amber-200" />
-                      <span>Lead Investigative Dossier</span>
-                    </span>
+                  <div className="relative z-10 flex items-center gap-1.5">
                     <span className="px-2.5 py-1 rounded-md bg-slate-900/90 text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider border border-slate-700 shadow-sm">
                       {activeStory.category}
                     </span>
+                    {activeStory.isBreaking && (
+                      <span className="px-2 py-0.5 rounded-md bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                        <Flame className="w-2.5 h-2.5 text-amber-200" />
+                        <span>BREAKING</span>
+                      </span>
+                    )}
                   </div>
 
                   {/* Centered Incoming Typography */}

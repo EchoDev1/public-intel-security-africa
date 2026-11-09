@@ -332,18 +332,22 @@ export default function TopIntelStory() {
                 </div>
               )}
 
-              {/* Badges on Real News Photo */}
-              <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2">
-                <span className="px-2.5 py-1 rounded-md bg-amber-600 text-white font-black text-[10px] sm:text-xs uppercase tracking-wider shadow-sm flex items-center gap-1">
-                  <Flame className="w-3 h-3 text-amber-200" />
-                  <span>Trending</span>
-                </span>
-                <span className="px-2.5 py-1 rounded-md bg-slate-900/85 backdrop-blur-md text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider border border-slate-700">
+              {/* Clean Minimal Badges on Photo - Unobtrusive & Sleek */}
+              <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
+                <span className="px-2.5 py-1 rounded-md bg-slate-900/85 backdrop-blur-md text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider border border-white/20 shadow-sm">
                   {activeStory.category}
                 </span>
-                <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono text-slate-300 bg-slate-950/70 border border-slate-800">
-                  {activeStory.featureSource}
-                </span>
+                {activeStory.isBreaking ? (
+                  <span className="px-2 py-0.5 rounded-md bg-red-600/95 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                    <Flame className="w-2.5 h-2.5 text-amber-200" />
+                    <span>BREAKING</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-600/90 text-white shadow-xs">
+                    <Flame className="w-2.5 h-2.5 text-amber-200" />
+                    <span>TRENDING</span>
+                  </span>
+                )}
               </div>
 
               {/* Bookmark Save Button */}
