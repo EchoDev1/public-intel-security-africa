@@ -58,7 +58,7 @@ const ROTATIONAL_TOP_STORIES = [
     slug: 'pan-african-cyber-defense-shield-banking-threats',
     featureSource: 'Cyber Threat Radar',
     title: 'Lagos & Regional Cyber Hubs Neutralize Continental Banking Ransomware',
-    category: 'Cybersecurity',
+    category: 'Digital Security',
     categorySlug: 'cybersecurity-and-digital-security',
     location: 'Lagos / Pan-African',
     threatLevel: 'Elevated',
@@ -308,8 +308,8 @@ export default function TopIntelStory() {
                   <div className="absolute inset-0 bg-[linear-gradient(to_right,#eab3080c_1px,transparent_1px),linear-gradient(to_bottom,#eab3080c_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none"></div>
 
                   <div className="relative z-10 flex items-center justify-between">
-                    <span className="px-2.5 py-1 rounded bg-amber-950/80 text-amber-400 text-[10px] font-mono font-bold uppercase tracking-wider border border-amber-500/40">
-                      {activeStory.category}
+                    <span className="px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-400 text-[8px] font-mono font-bold uppercase tracking-tight border border-amber-500/40 max-w-[32%] sm:max-w-[150px] truncate">
+                      {activeStory.category === 'Cybersecurity' ? 'Digital Security' : activeStory.category}
                     </span>
                     <Radio className="w-4 h-4 text-amber-500/80" />
                   </div>
@@ -332,33 +332,37 @@ export default function TopIntelStory() {
                 </div>
               )}
 
-              {/* Clean Minimal Badges on Photo - Unobtrusive & Sleek */}
-              <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
-                <span className="px-2.5 py-1 rounded-md bg-slate-900/85 backdrop-blur-md text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider border border-white/20 shadow-sm">
-                  {activeStory.category}
+              {/* News Section on Left Corner - Small discrete writing, stays strictly on the left corner */}
+              <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-10 max-w-[32%] sm:max-w-[150px]">
+                <span className="inline-block px-1.5 py-0.5 rounded bg-slate-900/85 backdrop-blur-md text-white text-[7.5px] sm:text-[8.5px] font-bold uppercase tracking-tight border border-white/20 shadow-xs truncate max-w-full">
+                  {activeStory.category === 'Cybersecurity' ? 'Digital Security' : activeStory.category}
                 </span>
+              </div>
+
+              {/* Latest or Breaking at Top Right Corner */}
+              <div className="absolute top-3 right-3 flex items-center gap-1.5 z-20">
                 {activeStory.isBreaking ? (
-                  <span className="px-2 py-0.5 rounded-md bg-red-600/95 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                  <span className="px-2 py-0.5 rounded-md bg-red-600/95 backdrop-blur-md text-white text-[9px] sm:text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
                     <Flame className="w-2.5 h-2.5 text-amber-200" />
                     <span>BREAKING</span>
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-600/90 text-white shadow-xs">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold bg-amber-600/90 backdrop-blur-md text-white shadow-xs">
                     <Flame className="w-2.5 h-2.5 text-amber-200" />
                     <span>TRENDING</span>
                   </span>
                 )}
-              </div>
 
-              {/* Bookmark Save Button */}
-              <button
-                onClick={(e) => toggleSave(activeStory, e)}
-                className="absolute top-3 right-3 p-2 rounded-full bg-slate-900/80 hover:bg-amber-600 text-white backdrop-blur-md border border-slate-700 transition-colors shadow-sm"
-                title={savedIds.includes(activeStory.id) || savedIds.includes(activeStory.slug) ? "Saved to Reading List" : "Save Story"}
-                aria-label="Save story"
-              >
-                <Bookmark className={`w-3.5 h-3.5 ${savedIds.includes(activeStory.id) || savedIds.includes(activeStory.slug) ? "fill-amber-400 text-amber-400" : ""}`} />
-              </button>
+                {/* Bookmark Save Button */}
+                <button
+                  onClick={(e) => toggleSave(activeStory, e)}
+                  className="p-1.5 rounded-full bg-slate-900/80 hover:bg-amber-600 text-white backdrop-blur-md border border-slate-700 transition-colors shadow-sm"
+                  title={savedIds.includes(activeStory.id) || savedIds.includes(activeStory.slug) ? "Saved to Reading List" : "Save Story"}
+                  aria-label="Save story"
+                >
+                  <Bookmark className={`w-3 h-3 ${savedIds.includes(activeStory.id) || savedIds.includes(activeStory.slug) ? "fill-amber-400 text-amber-400" : ""}`} />
+                </button>
+              </div>
 
               {/* Location & Time Overlay */}
               <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs text-white">

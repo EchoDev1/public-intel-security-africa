@@ -130,27 +130,29 @@ export default function ArticleCard({ article, layout = 'standard' }) {
           </div>
         )}
         
-        {/* Category & Badges */}
-        <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5 z-20">
-          <span className="px-2.5 py-1 rounded bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-slate-900 dark:text-white text-[10px] font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 shadow-xs">
-            {article.categoryName}
+        {/* Category / News Section on Left Corner - Small discrete writing, stays strictly on left */}
+        <div className="absolute top-2 left-2 z-20 max-w-[32%] sm:max-w-[130px]">
+          <span className="inline-block px-1.5 py-0.5 rounded bg-slate-900/85 backdrop-blur-md text-white text-[7.5px] sm:text-[8px] font-bold uppercase tracking-tight border border-white/20 shadow-xs truncate max-w-full">
+            {article.categoryName === 'Cybersecurity' ? 'Digital Security' : article.categoryName}
           </span>
+        </div>
+
+        {/* Latest or Breaking at Top Right Corner */}
+        <div className="absolute top-2.5 right-2.5 flex items-center gap-1 z-20">
           {article.isBreaking && (
-            <span className="px-2 py-0.5 rounded bg-red-600 text-white text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shadow-xs">
-              <Flame className="w-2.5 h-2.5" />
-              BREAKING
+            <span className="px-1.5 py-0.5 rounded bg-red-600/95 backdrop-blur-md text-white text-[8.5px] font-black uppercase tracking-wider flex items-center gap-0.5 shadow-xs">
+              <Flame className="w-2.5 h-2.5 text-amber-200" />
+              <span>BREAKING</span>
             </span>
           )}
           {article.videoUrl && (
-            <span className="px-2 py-0.5 rounded bg-amber-600 text-white text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
-              <Play className="w-2.5 h-2.5 fill-white" />
-              VIDEO
+            <span className="p-1 rounded bg-slate-900/85 backdrop-blur-md text-amber-400 border border-amber-500/40 shadow-xs" title="Video Dispatch">
+              <Play className="w-2.5 h-2.5 fill-amber-400" />
             </span>
           )}
           {article.audioUrl && (
-            <span className="px-2 py-0.5 rounded bg-blue-600 text-white text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
+            <span className="p-1 rounded bg-slate-900/85 backdrop-blur-md text-blue-400 border border-blue-500/40 shadow-xs" title="Audio Briefing">
               <Headphones className="w-2.5 h-2.5" />
-              AUDIO
             </span>
           )}
         </div>
