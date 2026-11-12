@@ -2,6 +2,10 @@ import React from 'react';
 import Link from 'next/link';
 import { Sparkles, CheckCircle2, ArrowRight, Shield } from 'lucide-react';
 import { WOMEN_IN_SECURITY } from '@/lib/data/womenInSecurity';
+import { getContent } from '@/lib/contentStore';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export const metadata = {
   title: 'Women in Security & Peacebuilding Network',
@@ -18,7 +22,10 @@ export const metadata = {
   },
 };
 
-export default function WomenInSecurityPage() {
+export default async function WomenInSecurityPage() {
+  const dynamicProfiles = await getContent('women_in_security', WOMEN_IN_SECURITY);
+  const profiles = Array.isArray(dynamicProfiles) && dynamicProfiles.length > 0 ? dynamicProfiles : WOMEN_IN_SECURITY;
+
   return (
     <div className="py-12 px-4 max-w-7xl mx-auto space-y-12 bg-white">
       
@@ -55,72 +62,80 @@ export default function WomenInSecurityPage() {
             Distinguished Security Pioneers & Strategists
           </h2>
           <span className="text-xs text-slate-500 font-mono font-medium">
-            {WOMEN_IN_SECURITY.length} Leaders Profiled
+            {profiles.length} Leaders Profiled
           </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {WOMEN_IN_SECURITY.map((leader) => (
-            <div
-              key={leader.id}
-              className="rounded-3xl bg-white border border-slate-200 hover:border-amber-600 p-6 md:p-8 flex flex-col justify-between shadow-sm hover:shadow-md transition-all"
-            >
-              <div className="space-y-5">
-                <div className="flex items-start gap-4">
-                  <div className="w-16 h-16 rounded-full bg-slate-900 border-2 border-amber-600 flex items-center justify-center text-amber-500 shrink-0 shadow-md">
-                    <Shield className="w-8 h-8 text-amber-500" />
+          {profiles.map((leader, idx) => {
+            const achievements = Array.isArray(leader.achievements) 
+              ? leader.achievements 
+              : (typeof leader.achievements === 'string' && leader.achievements.trim() 
+                  ? leader.achievements.split('\n').filter(Boolean) 
+                  : []);
+
+            return (
+              <div
+                key={leader.id || idx}
+                className="rounded-3xl bg-white border border-slate-200 hover:border-amber-600 p-6 md:p-8 flex flex-col justify-between shadow-sm hover:shadow-md transition-all"
+              >
+                <div className="space-y-5">
+                  <div className="flex items-start gap-4">
+                    <div className="w-16 h-16 rounded-full bg-slate-900 border-2 border-amber-600 flex items-center justify-center text-amber-500 shrink-0 shadow-md">
+                      <Shield className="w-8 h-8 text-amber-500" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
+                        {leader.country} • {leader.specialization || 'Strategic Security'}
+                      </span>
+                      <h3 className="text-lg md:text-xl font-bold text-slate-900 font-serif mt-0.5">
+                        {leader.name}
+                      </h3>
+                      <p className="text-xs text-slate-600">{leader.title || leader.titleAndRole}</p>
+                      <p className="text-xs text-slate-500 font-semibold">{leader.organization}</p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
-                      {leader.country} • {leader.specialization}
-                    </span>
-                    <h3 className="text-lg md:text-xl font-bold text-slate-900 font-serif mt-0.5">
-                      {leader.name}
-                    </h3>
-                    <p className="text-xs text-slate-600">{leader.title}</p>
-                    <p className="text-xs text-slate-500 font-semibold">{leader.organization}</p>
-                  </div>
+
+                  {leader.featuredQuote && (
+                    <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200 text-xs text-slate-800 italic font-medium">
+                      &ldquo;{leader.featuredQuote}&rdquo;
+                    </div>
+                  )}
+
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    {leader.bio}
+                  </p>
+
+                  {achievements.length > 0 && (
+                    <div className="space-y-1.5 pt-2">
+                      <h5 className="text-[11px] font-black uppercase tracking-wider text-slate-700">
+                        Key Career Breakthroughs:
+                      </h5>
+                      <ul className="space-y-1 text-xs text-slate-700 font-medium">
+                        {achievements.map((ach, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                            <span>{ach}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
 
-                {leader.featuredQuote && (
-                  <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200 text-xs text-slate-800 italic font-medium">
-                    &ldquo;{leader.featuredQuote}&rdquo;
-                  </div>
-                )}
-
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  {leader.bio}
-                </p>
-
-                {leader.achievements && (
-                  <div className="space-y-1.5 pt-2">
-                    <h5 className="text-[11px] font-black uppercase tracking-wider text-slate-700">
-                      Key Career Breakthroughs:
-                    </h5>
-                    <ul className="space-y-1 text-xs text-slate-700 font-medium">
-                      {leader.achievements.map((ach, i) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                          <span>{ach}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                <div className="pt-6 mt-6 border-t border-slate-100 flex items-center justify-between text-xs">
+                  <span className="text-slate-400 font-mono">Specialist Fellow</span>
+                  <Link
+                    href="/contacts"
+                    className="text-amber-800 hover:text-amber-900 font-bold flex items-center gap-1"
+                  >
+                    <span>Request Keynote / Inquiry</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
               </div>
-
-              <div className="pt-6 mt-6 border-t border-slate-100 flex items-center justify-between text-xs">
-                <span className="text-slate-400 font-mono">Specialist Fellow</span>
-                <Link
-                  href="/contacts"
-                  className="text-amber-800 hover:text-amber-900 font-bold flex items-center gap-1"
-                >
-                  <span>Request Keynote / Inquiry</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 

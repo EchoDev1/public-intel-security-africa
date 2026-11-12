@@ -1,11 +1,30 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tv, Play } from 'lucide-react';
 import { TELEVISION_SHOWS } from '@/lib/data/multimedia';
 
 export default function TelevisionPage() {
+  const [shows, setShows] = useState(TELEVISION_SHOWS);
   const [selectedVideo, setSelectedVideo] = useState(TELEVISION_SHOWS[0]);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadTv() {
+      try {
+        const res = await fetch(`/api/broadcast-media?t=${Date.now()}`, { cache: 'no-store' });
+        const data = await res.json();
+        if (isMounted && data.success && Array.isArray(data.tvChannels) && data.tvChannels.length > 0) {
+          setShows(data.tvChannels);
+          setSelectedVideo(prev => data.tvChannels.find(x => x.id === prev?.id) || data.tvChannels[0]);
+        }
+      } catch (_) {}
+    }
+    loadTv();
+    return () => { isMounted = false; };
+  }, []);
+
+  const activeVideo = selectedVideo || shows[0] || {};
 
   return (
     <div className="py-12 px-4 max-w-7xl mx-auto space-y-12 bg-white">
@@ -62,7 +81,7 @@ export default function TelevisionPage() {
           {/* Play Button */}
           <div className="absolute inset-0 flex items-center justify-center">
             <button
-              onClick={() => alert(`Starting video broadcast: ${selectedVideo.title}`)}
+              onClick={() => alert(`Starting video broadcast: ${activeVideo.title}`)}
               className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow-2xl transition-transform hover:scale-110 pl-1 border-4 border-white"
             >
               <Play className="w-10 h-10 fill-white" />
@@ -72,16 +91,16 @@ export default function TelevisionPage() {
           <div className="absolute bottom-6 left-6 right-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div className="max-w-2xl space-y-1.5">
               <span className="px-2.5 py-0.5 rounded bg-amber-600 text-white text-[10px] font-bold uppercase tracking-wider">
-                {selectedVideo.category}
+                {activeVideo.category || activeVideo.platform || 'Special Broadcast'}
               </span>
               <h1 className="text-xl md:text-3xl font-black text-white font-serif leading-tight">
-                {selectedVideo.title}
+                {activeVideo.title}
               </h1>
             </div>
 
             <div className="text-right text-xs font-mono text-slate-200">
-              <span className="text-amber-300 block font-bold">{selectedVideo.broadcastTime}</span>
-              <span>{selectedVideo.views}</span>
+              <span className="text-amber-300 block font-bold">{activeVideo.broadcastTime || activeVideo.scheduledTime}</span>
+              <span>{activeVideo.views || activeVideo.duration}</span>
             </div>
           </div>
         </div>
@@ -92,7 +111,7 @@ export default function TelevisionPage() {
             Broadcast Intelligence Overview
           </h3>
           <p className="text-xs md:text-sm text-slate-600 leading-relaxed font-medium">
-            {selectedVideo.description}
+            {activeVideo.description}
           </p>
         </div>
       </div>
@@ -105,12 +124,12 @@ export default function TelevisionPage() {
             <span>Public Intel Television Episodes & Documentaries</span>
           </h2>
           <span className="text-xs text-slate-500 font-mono font-medium">
-            {TELEVISION_SHOWS.length} Bulletins On Demand
+            {shows.length} Bulletins On Demand
           </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {TELEVISION_SHOWS.map((tv) => (
+          {shows.map((tv) => (
             <div
               key={tv.id}
               onClick={() => {
@@ -123,33 +142,43 @@ export default function TelevisionPage() {
                 <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-radial-[at_top_left] from-slate-900 to-black p-3 mb-3 flex flex-col justify-between border border-slate-800 select-none">
                   <div className="flex items-center justify-between text-[9px] font-mono">
                     <span className="px-2 py-0.5 rounded bg-red-600 text-white font-bold uppercase text-[9px]">
-                      {tv.category}
+                      {tv.category || tv.platform || 'Broadcast'}
                     </span>
                     <span className="text-slate-400">{tv.duration}</span>
                   </div>
                   <div className="text-center my-auto py-1">
-                    <div className="text-[9.5px] font-black uppercase tracking-wider text-white font-mono leading-tight">
-                      PI-TV BROADCAST<br/>NEWS INCOMING
+                    <div className="text-amber-500/80 font-mono text-[9px] uppercase tracking-widest mb-0.5">
+                      Public Intel Broadcast
+                    </div>
+                    <div className="text-[11px] font-black tracking-wider uppercase font-mono text-white line-clamp-1">
+                      {tv.title}
                     </div>
                   </div>
-                  <div className="text-[8px] font-mono text-slate-500 border-t border-slate-800 pt-1">
-                    BROADCAST EPISODE
+                  <div className="flex items-center justify-between text-[8px] text-slate-500 font-mono border-t border-slate-900 pt-1">
+                    <span>STUDIO TRANSMISSION</span>
+                    <span className="text-red-400 font-bold">PI-TV DISPATCH</span>
                   </div>
                 </div>
 
-                <h3 className="text-sm font-bold text-slate-900 group-hover:text-red-700 transition-colors leading-snug line-clamp-2 font-serif">
-                  {tv.title}
-                </h3>
-                <p className="text-xs text-slate-600 mt-2 line-clamp-2">
-                  {tv.description}
-                </p>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
+                    <span>{tv.broadcastTime || tv.scheduledTime}</span>
+                    <span className="text-amber-800 font-bold">{tv.views || tv.duration}</span>
+                  </div>
+
+                  <h3 className="text-base font-bold text-slate-900 font-serif leading-snug group-hover:text-red-700 transition-colors line-clamp-2">
+                    {tv.title}
+                  </h3>
+
+                  <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                    {tv.description}
+                  </p>
+                </div>
               </div>
 
-              <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
-                <span className="font-mono">{tv.views}</span>
-                <span className="text-red-700 font-bold group-hover:translate-x-1 transition-transform">
-                  Watch on Player →
-                </span>
+              <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-red-700">
+                <span>Watch Stream</span>
+                <span>→</span>
               </div>
             </div>
           ))}

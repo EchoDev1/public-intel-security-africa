@@ -1,6 +1,7 @@
 import { CONTINENTAL_THREAT_INDEX, BREAKING_ALERTS } from '../data/threatRadar';
 import { createServerSupabaseClient } from '../supabase/server';
 import { isSupabaseConfigured } from '../supabase/client';
+import { getContent, saveContent } from '../contentStore';
 
 function getNodeFs() {
   if (typeof window === 'undefined') {
@@ -90,6 +91,14 @@ export async function getThreatMatrixData() {
     } catch (_) {}
   }
 
+  // 1b. Try unified content store
+  try {
+    const unified = await getContent('threat_matrix');
+    if (unified && Array.isArray(unified.sectors) && unified.sectors.length > 0) {
+      return unified;
+    }
+  } catch (_) {}
+
   // 2. Try local persisted file
   let localData = null;
   try {
@@ -143,7 +152,7 @@ export async function saveThreatMatrixData(newData) {
     }
   } catch (_) {}
 
-  // 2. Persist to Supabase cloud categories table
+  // 2. Persist to Supabase cloud categories table (both direct and unified contentStore)
   if (isSupabaseConfigured()) {
     try {
       const supabase = createServerSupabaseClient();
@@ -157,6 +166,10 @@ export async function saveThreatMatrixData(newData) {
       console.error('Threat matrix Supabase persistence note:', err.message);
     }
   }
+
+  try {
+    await saveContent('threat_matrix', state, { name: 'Continental Security Threat Matrix' });
+  } catch (_) {}
 
   return state;
 }

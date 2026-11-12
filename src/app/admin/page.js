@@ -324,9 +324,191 @@ export default function AdminDashboardPage() {
     } catch (_) {}
   };
 
+  const fetchPartnerships = async () => {
+    try {
+      const res = await fetch(`/api/partnerships?t=${Date.now()}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (data?.success) {
+        if (Array.isArray(data.inquiries)) setPartnershipInquiries(data.inquiries);
+        if (Array.isArray(data.partnerships) && data.partnerships.length > 0) setPartnerships(data.partnerships);
+        if (Array.isArray(data.bureauContacts) && data.bureauContacts.length > 0) setBureauContacts(data.bureauContacts);
+      }
+    } catch (_) {}
+  };
+
+  const fetchTraining = async () => {
+    try {
+      const res = await fetch(`/api/training?t=${Date.now()}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (data?.success) {
+        if (Array.isArray(data.courses) && data.courses.length > 0) setCoursesList(data.courses);
+        if (Array.isArray(data.enlisters) && data.enlisters.length > 0) setEnlistersList(data.enlisters);
+        if (data.paymentGatewaySettings) setPaymentGatewaySettings(data.paymentGatewaySettings);
+      }
+    } catch (_) {}
+  };
+
+  const fetchBroadcastMedia = async () => {
+    try {
+      const res = await fetch(`/api/broadcast-media?t=${Date.now()}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (data?.success) {
+        if (Array.isArray(data.tvChannels) && data.tvChannels.length > 0) setTvChannels(data.tvChannels);
+        if (Array.isArray(data.radioChannels) && data.radioChannels.length > 0) setRadioChannels(data.radioChannels);
+        if (Array.isArray(data.podcastShows) && data.podcastShows.length > 0) setPodcastShows(data.podcastShows);
+      }
+    } catch (_) {}
+  };
+
+  const fetchWebinars = async () => {
+    try {
+      const res = await fetch(`/api/webinars?t=${Date.now()}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (data?.success && Array.isArray(data.webinars) && data.webinars.length > 0) {
+        setWebinars(data.webinars);
+      }
+    } catch (_) {}
+  };
+
+  const fetchWomenInSecurity = async () => {
+    try {
+      const res = await fetch(`/api/women-in-security?t=${Date.now()}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (data?.success && Array.isArray(data.profiles) && data.profiles.length > 0) {
+        setWomenList(data.profiles);
+      }
+    } catch (_) {}
+  };
+
+  const handleSaveCourses = async (updatedCourses) => {
+    try {
+      await fetch('/api/training', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_courses', courses: updatedCourses })
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pisa_training_updated'));
+      }
+    } catch (_) {}
+  };
+
+  const handleSaveEnlisters = async (updatedEnlisters) => {
+    try {
+      await fetch('/api/training', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_enlisters', enlisters: updatedEnlisters })
+      });
+    } catch (_) {}
+  };
+
+  const handleSaveGateway = async (updatedGateway) => {
+    try {
+      await fetch('/api/training', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_gateway', paymentGatewaySettings: updatedGateway })
+      });
+    } catch (_) {}
+  };
+
+  const handleSavePartnerships = async (updatedPartnerships) => {
+    try {
+      await fetch('/api/partnerships', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_partnerships', partnerships: updatedPartnerships })
+      });
+    } catch (_) {}
+  };
+
+  const handleSaveBureaus = async (updatedBureaus) => {
+    try {
+      await fetch('/api/partnerships', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_bureaus', bureauContacts: updatedBureaus })
+      });
+    } catch (_) {}
+  };
+
+  const handleUpdateInquiryStatus = async (id, status) => {
+    try {
+      setPartnershipInquiries(prev => prev.map(inq => inq.id === id ? { ...inq, status } : inq));
+      await fetch('/api/partnerships', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_inquiry_status', id, status })
+      });
+      showToast(`Inquiry marked as: ${status}`);
+    } catch (_) {}
+  };
+
+  const handleDeleteInquiry = async (id) => {
+    try {
+      setPartnershipInquiries(prev => prev.filter(inq => inq.id !== id));
+      await fetch('/api/partnerships', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_inquiry', id })
+      });
+      showToast('Inquiry removed.');
+    } catch (_) {}
+  };
+
+  const handleSaveBroadcastMedia = async (tv, radio, podcasts) => {
+    try {
+      await fetch('/api/broadcast-media', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tvChannels: tv || tvChannels,
+          radioChannels: radio || radioChannels,
+          podcastShows: podcasts || podcastShows
+        })
+      });
+    } catch (_) {}
+  };
+
+  const handleSaveWebinars = async (updatedWebinars) => {
+    try {
+      await fetch('/api/webinars', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ webinars: updatedWebinars })
+      });
+    } catch (_) {}
+  };
+
+  const handleSaveWomenInSecurity = async (updatedWomen) => {
+    try {
+      await fetch('/api/women-in-security', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profiles: updatedWomen })
+      });
+    } catch (_) {}
+  };
+
   useEffect(() => {
     fetchLiveArticles();
     fetchThreatMatrix();
+    fetchPartnerships();
+    fetchTraining();
+    fetchBroadcastMedia();
+    fetchWebinars();
+    fetchWomenInSecurity();
+
+    const handleInquiries = () => fetchPartnerships();
+    const handleTrainingUpdate = () => fetchTraining();
+    window.addEventListener('pisa_inquiries_updated', handleInquiries);
+    window.addEventListener('pisa_training_updated', handleTrainingUpdate);
+
+    return () => {
+      window.removeEventListener('pisa_inquiries_updated', handleInquiries);
+      window.removeEventListener('pisa_training_updated', handleTrainingUpdate);
+    };
   }, []);
 
   const handlePurgeAllDummy = async () => {
@@ -765,6 +947,7 @@ export default function AdminDashboardPage() {
   // -------------------------------------------------------------
   // 9. PARTNERSHIPS, COLLABORATION & BUREAU CONTACTS
   // -------------------------------------------------------------
+  const [partnershipInquiries, setPartnershipInquiries] = useState([]);
   const [partnerships, setPartnerships] = useState([
     {
       id: 'part-01',
@@ -3539,7 +3722,12 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                         <ExternalLink className="w-3 h-3" />
                       </Link>
                       <button
-                        onClick={() => { setTvChannels(tvChannels.filter(x => x.id !== tv.id)); showToast('Channel removed.'); }}
+                        onClick={() => {
+                          const updated = tvChannels.filter(x => x.id !== tv.id);
+                          setTvChannels(updated);
+                          handleSaveBroadcastMedia(updated, radioChannels, podcastShows);
+                          showToast('Channel removed.');
+                        }}
                         className="text-red-500 hover:text-red-700"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -3572,7 +3760,52 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                         <ExternalLink className="w-3 h-3" />
                       </Link>
                       <button
-                        onClick={() => { setRadioChannels(radioChannels.filter(x => x.id !== rad.id)); showToast('Radio stream deleted.'); }}
+                        onClick={() => {
+                          const updated = radioChannels.filter(x => x.id !== rad.id);
+                          setRadioChannels(updated);
+                          handleSaveBroadcastMedia(tvChannels, updated, podcastShows);
+                          showToast('Radio stream deleted.');
+                        }}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Podcasts & Audio Intelligence */}
+            <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                <Headphones className="w-4 h-4 text-indigo-600" />
+                <span>Podcast Shows & Audio Dispatches ({podcastShows.length})</span>
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {podcastShows.map(pod => (
+                  <div key={pod.id} className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 shadow-2xs text-xs flex flex-col justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-[10px] font-bold uppercase text-indigo-600">{pod.showName || 'Podcast'}</span>
+                        <span className="text-[10px] text-slate-400 font-mono">{pod.duration}</span>
+                      </div>
+                      <h4 className="font-bold text-slate-900 dark:text-white line-clamp-1">{pod.title}</h4>
+                      <p className="text-[11px] text-slate-500 line-clamp-2">{pod.description || pod.summary || `Host: ${pod.host}`}</p>
+                    </div>
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                      <Link href={pod.audioUrl || '/podcasts'} target="_blank" className="text-indigo-600 font-bold hover:underline flex items-center gap-1">
+                        <span>Listen to Episode</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </Link>
+                      <button
+                        onClick={() => {
+                          const updated = podcastShows.filter(x => x.id !== pod.id);
+                          setPodcastShows(updated);
+                          handleSaveBroadcastMedia(tvChannels, radioChannels, updated);
+                          showToast('Podcast episode deleted.');
+                        }}
                         className="text-red-500 hover:text-red-700"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -3630,7 +3863,12 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                       <ExternalLink className="w-3 h-3" />
                     </Link>
                     <button
-                      onClick={() => { setWebinars(webinars.filter(x => x.id !== w.id)); showToast('Webinar removed.'); }}
+                      onClick={() => {
+                        const updated = webinars.filter(x => x.id !== w.id);
+                        setWebinars(updated);
+                        handleSaveWebinars(updated);
+                        showToast('Webinar removed.');
+                      }}
                       className="text-red-500 hover:text-red-700"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -3670,6 +3908,71 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
               </div>
             </div>
 
+            {/* ACCREDITED COURSES CATALOG MANAGER */}
+            <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <Award className="w-4 h-4 text-purple-600" />
+                    <span>Accredited Academy Courses ({coursesList.length})</span>
+                  </h3>
+                  <p className="text-xs text-slate-500">Live published courses visible on the public Training Academy page.</p>
+                </div>
+                <button
+                  onClick={() => setNewCourseModal(true)}
+                  className="px-3.5 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Course</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {coursesList.map((course, idx) => (
+                  <div key={course.id || idx} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex flex-col justify-between space-y-3 text-xs">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-bold text-purple-700 dark:text-purple-400 text-xs px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950">
+                          {course.code || 'CERT'}
+                        </span>
+                        <span className="font-semibold text-slate-500 text-[11px]">{course.level || 'Accredited'}</span>
+                      </div>
+                      <h4 className="font-bold text-slate-900 dark:text-white text-sm line-clamp-2 leading-snug">
+                        {course.title}
+                      </h4>
+                      <p className="text-slate-600 dark:text-slate-300 line-clamp-2 text-[11px] leading-relaxed">
+                        {course.description}
+                      </p>
+                      <div className="font-mono text-[11px] text-slate-500 pt-1 space-y-0.5">
+                        <div>Duration: <span className="text-slate-700 dark:text-slate-300 font-semibold">{course.duration}</span></div>
+                        <div>Fee: <span className="text-emerald-700 dark:text-emerald-400 font-semibold">{course.fee}</span></div>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                      <Link href="/training" target="_blank" className="text-purple-700 dark:text-purple-400 font-bold hover:underline flex items-center gap-1 text-[11px]">
+                        <span>View on Site</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </Link>
+                      <button
+                        onClick={() => {
+                          if (!window.confirm(`Delete course "${course.title}" from Training Academy?`)) return;
+                          const updated = coursesList.filter((_, i) => i !== idx);
+                          setCoursesList(updated);
+                          handleSaveCourses(updated);
+                          showToast(`Course "${course.title}" deleted.`);
+                        }}
+                        className="text-red-500 hover:text-red-700 flex items-center gap-1 font-bold text-[11px]"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* PAYMENT GATEWAY CONFIGURATION BOX */}
             <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
@@ -3685,7 +3988,11 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                 </span>
               </div>
 
-              <form onSubmit={(e) => { e.preventDefault(); showToast('Payment Gateway settings updated & active!'); }} className="space-y-4 text-xs">
+              <form onSubmit={(e) => { 
+                e.preventDefault(); 
+                handleSaveGateway(paymentGatewaySettings); 
+                showToast('Payment Gateway settings updated & active!'); 
+              }} className="space-y-4 text-xs">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1">
                     <label className="font-bold uppercase text-slate-700 dark:text-slate-300">Active Gateway Provider</label>
@@ -3809,7 +4116,9 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                         {!isApproved ? (
                           <button
                             onClick={() => {
-                              setEnlistersList(enlistersList.map(e => e.id === enl.id ? { ...e, approvalStatus: 'Approved & Accredited', approvalNotes: `Approved by Lady Dakore on ${new Date().toLocaleDateString()}. Clearance email dispatched.` } : e));
+                              const updated = enlistersList.map(e => e.id === enl.id ? { ...e, approvalStatus: 'Approved & Accredited', approvalNotes: `Approved by Director on ${new Date().toLocaleDateString()}. Clearance email dispatched.` } : e);
+                              setEnlistersList(updated);
+                              handleSaveEnlisters(updated);
                               showToast(`Enlister ${enl.fullName} approved & accredited! Email sent.`);
                             }}
                             className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-1 text-[11px]"
@@ -3831,12 +4140,28 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
 
                         <button
                           onClick={() => {
-                            setEnlistersList(enlistersList.map(e => e.id === enl.id ? { ...e, approvalStatus: 'Rejected' } : e));
+                            const updated = enlistersList.map(e => e.id === enl.id ? { ...e, approvalStatus: 'Rejected' } : e);
+                            setEnlistersList(updated);
+                            handleSaveEnlisters(updated);
                             showToast(`Application for ${enl.fullName} marked as rejected.`);
                           }}
                           className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-[11px]"
                         >
                           Reject
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            if (!window.confirm(`Delete application for ${enl.fullName}?`)) return;
+                            const updated = enlistersList.filter(e => e.id !== enl.id);
+                            setEnlistersList(updated);
+                            handleSaveEnlisters(updated);
+                            showToast(`Application for ${enl.fullName} deleted.`);
+                          }}
+                          className="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+                          title="Delete application"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
@@ -3902,7 +4227,12 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                   </p>
                     <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end">
                       <button
-                        onClick={() => { setWomenList(womenList.filter((_, i) => i !== idx)); showToast('Profile removed.'); }}
+                        onClick={() => {
+                          const updated = womenList.filter((_, i) => i !== idx);
+                          setWomenList(updated);
+                          handleSaveWomenInSecurity(updated);
+                          showToast('Profile removed.');
+                        }}
                         className="text-red-500 hover:text-red-700 text-xs font-bold"
                       >
                         Delete
@@ -4096,9 +4426,9 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                             <span>Edit</span>
                           </button>
                           <button
-                            onClick={() => {
+                            onClick={async () => {
                               setSpecialReportsList(specialReportsList.filter((_, i) => i !== idx));
-                              showToast(`Special Report "${rep.title}" deleted.`);
+                              await handleDeleteArticle(rep.id, rep.slug);
                             }}
                             className="text-red-500 hover:text-red-700 font-bold flex items-center gap-1"
                           >
@@ -4149,6 +4479,126 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
               </div>
             </div>
 
+            {/* INCOMING PARTNERSHIP & COLLABORATION INQUIRIES INBOX */}
+            <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <Handshake className="w-4 h-4 text-amber-600" />
+                    <span>Incoming Inquiries & Proposals ({partnershipInquiries.length})</span>
+                  </h3>
+                  <p className="text-xs text-slate-500">Live proposals submitted through the public Partnership and Collaboration portals.</p>
+                </div>
+                <button
+                  onClick={fetchPartnerships}
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-bold flex items-center gap-1.5"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Refresh Inbox</span>
+                </button>
+              </div>
+
+              {partnershipInquiries.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 text-xs">
+                  No pending inquiries received yet. Submissions from /partnership and /collaboration appear here live.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {partnershipInquiries.map((inq) => {
+                    const isCollab = (inq.proposal_summary && inq.proposal_summary.includes('[COLLABORATION]')) || (inq.partnership_pillar && inq.partnership_pillar.toLowerCase().includes('collaboration'));
+                    return (
+                      <div key={inq.id} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3 text-xs">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                                isCollab 
+                                  ? 'bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800' 
+                                  : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                              }`}>
+                                {isCollab ? '🤝 COLLABORATION' : '🏛️ PARTNERSHIP'}
+                              </span>
+                              <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                                {inq.organization_name}
+                              </h4>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                inq.status === 'Approved & Active' 
+                                  ? 'bg-emerald-100 text-emerald-800' 
+                                  : inq.status === 'Under Review' 
+                                    ? 'bg-blue-100 text-blue-800' 
+                                    : inq.status === 'Declined' 
+                                      ? 'bg-red-100 text-red-800' 
+                                      : 'bg-amber-100 text-amber-800'
+                              }`}>
+                                {inq.status}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-slate-500 font-mono">
+                              Contact: <strong className="text-slate-700 dark:text-slate-300">{inq.contact_name}</strong> • {inq.contact_email} {inq.contact_phone && `• ${inq.contact_phone}`} • {inq.country}
+                            </div>
+                          </div>
+
+                          <div className="text-[10px] text-slate-400 font-mono sm:text-right">
+                            {inq.created_at ? new Date(inq.created_at).toLocaleDateString() : 'Recent'}
+                          </div>
+                        </div>
+
+                        <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                          <div className="text-[10px] font-bold uppercase text-amber-800 dark:text-amber-400">
+                            Pillar: {inq.partnership_pillar}
+                          </div>
+                          <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-[11px]">
+                            {inq.proposal_summary}
+                          </p>
+                        </div>
+
+                        <div className="pt-1 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 dark:border-slate-700">
+                          <div className="flex items-center gap-2">
+                            {inq.status !== 'Approved & Active' && (
+                              <button
+                                onClick={() => handleUpdateInquiryStatus(inq.id, 'Approved & Active')}
+                                className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1"
+                              >
+                                <Check className="w-3 h-3" />
+                                <span>Approve &amp; Mark Active</span>
+                              </button>
+                            )}
+                            {inq.status !== 'Under Review' && (
+                              <button
+                                onClick={() => handleUpdateInquiryStatus(inq.id, 'Under Review')}
+                                className="px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 font-bold text-[11px]"
+                              >
+                                Mark Under Review
+                              </button>
+                            )}
+                            {inq.status !== 'Declined' && (
+                              <button
+                                onClick={() => handleUpdateInquiryStatus(inq.id, 'Declined')}
+                                className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[11px]"
+                              >
+                                Decline
+                              </button>
+                            )}
+                          </div>
+
+                          <button
+                            onClick={() => {
+                              if (!window.confirm(`Delete inquiry from ${inq.organization_name}?`)) return;
+                              handleDeleteInquiry(inq.id);
+                            }}
+                            className="text-red-500 hover:text-red-700 text-[11px] font-bold flex items-center gap-1"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             {/* Bureau Contacts */}
             <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
               <div className="flex items-center justify-between">
@@ -4195,7 +4645,10 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                       </button>
                       <button
                         onClick={() => {
-                          setBureauContacts(bureauContacts.filter((_, i) => i !== idx));
+                          if (!window.confirm(`Delete bureau office in ${b.city}?`)) return;
+                          const updated = bureauContacts.filter((_, i) => i !== idx);
+                          setBureauContacts(updated);
+                          handleSaveBureaus(updated);
                           showToast(`Bureau office in ${b.city} deleted.`);
                         }}
                         className="text-red-500 hover:text-red-700 flex items-center gap-1"
@@ -4259,7 +4712,10 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                         </button>
                         <button
                           onClick={() => {
-                            setPartnerships(partnerships.filter((_, i) => i !== idx));
+                            if (!window.confirm(`Delete partnership with ${p.org}?`)) return;
+                            const updated = partnerships.filter((_, i) => i !== idx);
+                            setPartnerships(updated);
+                            handleSavePartnerships(updated);
                             showToast(`Partnership with "${p.org}" removed.`);
                           }}
                           className="text-red-500 hover:text-red-700 flex items-center gap-1"
@@ -5889,7 +6345,9 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                   thumbnail: newMediaItem.thumbnail,
                   description: newMediaItem.description
                 };
-                setTvChannels([item, ...tvChannels]);
+                const updatedTv = [item, ...tvChannels];
+                setTvChannels(updatedTv);
+                handleSaveBroadcastMedia(updatedTv, radioChannels, podcastShows);
                 showToast(`TV Channel "${item.title}" added successfully!`);
               } else if (newMediaType === 'radio') {
                 const rad = {
@@ -5902,8 +6360,27 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                   schedule: newMediaItem.schedule || 'Daily Broadcast',
                   joinLink: newMediaItem.joinLink || '/radio'
                 };
-                setRadioChannels([rad, ...radioChannels]);
+                const updatedRad = [rad, ...radioChannels];
+                setRadioChannels(updatedRad);
+                handleSaveBroadcastMedia(tvChannels, updatedRad, podcastShows);
                 showToast(`Radio Stream "${rad.title}" added!`);
+              } else if (newMediaType === 'podcast') {
+                const pod = {
+                  id: `pod-${Date.now()}`,
+                  title: newMediaItem.title,
+                  showName: newMediaItem.platform || 'Public Intel Podcast Network',
+                  episodeNumber: newMediaItem.schedule || `EP-${podcastShows.length + 1}`,
+                  host: newMediaItem.host || 'Lady Dakore Ekpendu',
+                  guest: newMediaItem.description || 'Defense & Intelligence Analyst',
+                  duration: newMediaItem.duration || '45 mins',
+                  publishDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                  audioUrl: newMediaItem.streamUrl,
+                  description: newMediaItem.description || ''
+                };
+                const updatedPod = [pod, ...podcastShows];
+                setPodcastShows(updatedPod);
+                handleSaveBroadcastMedia(tvChannels, radioChannels, updatedPod);
+                showToast(`Podcast Episode "${pod.title}" added!`);
               }
               setNewMediaModal(false);
             }} className="space-y-3 text-xs">
@@ -6037,7 +6514,9 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                 coverImage: webinarPhotoPreview || newWebinarItem.coverImage,
                 videoPreviewUrl: webinarVideoPreview || ''
               };
-              setWebinars([w, ...webinars]);
+              const updated = [w, ...webinars];
+              setWebinars(updated);
+              handleSaveWebinars(updated);
               showToast(`Webinar "${w.title}" created!`);
               setNewWebinarModal(false);
             }} className="space-y-3 text-xs">
@@ -6124,7 +6603,9 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                 description: newCourse.description,
                 image: coursePhotoPreview || newCourse.image
               };
-              setCoursesList([...coursesList, c]);
+              const updated = [...coursesList, c];
+              setCoursesList(updated);
+              handleSaveCourses(updated);
               showToast(`Course "${c.title}" added to Training Academy!`);
               setNewCourseModal(false);
             }} className="space-y-3 text-xs">
@@ -6210,7 +6691,9 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                 imageUrl: womanPhotoPreview || newWoman.imageUrl || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80',
                 videoInterviewUrl: womanVideoPreview || ''
               };
-              setWomenList([w, ...womenList]);
+              const updated = [w, ...womenList];
+              setWomenList(updated);
+              handleSaveWomenInSecurity(updated);
               showToast(`Executive profile for "${w.name}" spotlighted!`);
               setNewWomanModal(false);
             }} className="space-y-3 text-xs">
@@ -7088,11 +7571,22 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (editingSpecialReport) {
-                  setSpecialReportsList(specialReportsList.map(r => r.id === editingSpecialReport.id ? {
+                  const updatedItem = {
                     ...editingSpecialReport,
-                    coverImage: editReportPhotoPreview || editingSpecialReport.coverImage
-                  } : r));
-                  showToast(`Special Report "${editingSpecialReport.title}" updated!`);
+                    coverImage: editReportPhotoPreview || editingSpecialReport.coverImage,
+                    isSpecialReport: true
+                  };
+                  setSpecialReportsList(specialReportsList.map(r => r.id === editingSpecialReport.id ? updatedItem : r));
+                  setArticlesList(articlesList.map(r => (r.id === editingSpecialReport.id || r.slug === editingSpecialReport.slug) ? updatedItem : r));
+                  try {
+                    await fetch('/api/articles', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(updatedItem)
+                    });
+                    fetchLiveArticles();
+                  } catch (_) {}
+                  showToast(`Special Report "${editingSpecialReport.title}" updated and synced live!`);
                   setEditingSpecialReport(null);
                 } else {
                   const rep = {
@@ -7273,7 +7767,9 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (editingPartnership) {
-                  setPartnerships(partnerships.map(p => p.id === editingPartnership.id ? { ...editingPartnership } : p));
+                  const updated = partnerships.map(p => p.id === editingPartnership.id ? { ...editingPartnership } : p);
+                  setPartnerships(updated);
+                  handleSavePartnerships(updated);
                   showToast(`Partnership with "${editingPartnership.org}" updated!`);
                   setEditingPartnership(null);
                 } else {
@@ -7288,7 +7784,9 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                     date: new Date().toISOString().split('T')[0],
                     notes: newPartnership.notes || ''
                   };
-                  setPartnerships([p, ...partnerships]);
+                  const updated = [p, ...partnerships];
+                  setPartnerships(updated);
+                  handleSavePartnerships(updated);
                   showToast(`Partnership with "${p.org}" added successfully!`);
                   setNewPartnershipModal(false);
                 }
@@ -7426,7 +7924,9 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (editingBureau) {
-                  setBureauContacts(bureauContacts.map(b => (b.id && b.id === editingBureau.id) || b.city === editingBureau.city ? { ...editingBureau } : b));
+                  const updated = bureauContacts.map(b => (b.id && b.id === editingBureau.id) || b.city === editingBureau.city ? { ...editingBureau } : b);
+                  setBureauContacts(updated);
+                  handleSaveBureaus(updated);
                   showToast(`Bureau office in "${editingBureau.city}" updated!`);
                   setEditingBureau(null);
                 } else {
@@ -7441,7 +7941,9 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                     officerInCharge: newBureau.officerInCharge || '',
                     isHeadquarters: newBureau.isHeadquarters || false
                   };
-                  setBureauContacts([...bureauContacts, b]);
+                  const updated = [...bureauContacts, b];
+                  setBureauContacts(updated);
+                  handleSaveBureaus(updated);
                   showToast(`Bureau office in "${b.city}" added to Directory!`);
                   setNewBureauModal(false);
                 }

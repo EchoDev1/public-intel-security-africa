@@ -1,12 +1,30 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Headphones, Play } from 'lucide-react';
 import { PODCAST_EPISODES } from '@/lib/data/multimedia';
 import { useRadio } from '@/context/RadioContext';
 
 export default function PodcastsPage() {
   const { togglePlay, currentTrack, isPlaying } = useRadio();
+  const [podcasts, setPodcasts] = useState(PODCAST_EPISODES);
+
+  const fetchPodcasts = async () => {
+    try {
+      const res = await fetch('/api/broadcast-media');
+      const data = await res.json();
+      if (data?.success && Array.isArray(data.podcastShows) && data.podcastShows.length > 0) {
+        setPodcasts(data.podcastShows);
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    fetchPodcasts();
+    const handleUpdate = () => fetchPodcasts();
+    window.addEventListener('pisa_broadcast_media_updated', handleUpdate);
+    return () => window.removeEventListener('pisa_broadcast_media_updated', handleUpdate);
+  }, []);
 
   return (
     <div className="py-12 px-4 max-w-7xl mx-auto space-y-12 bg-white">
@@ -27,7 +45,7 @@ export default function PodcastsPage() {
 
       {/* Episodes Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {PODCAST_EPISODES.map((ep) => {
+        {podcasts.map((ep) => {
           const isThisPlaying = isPlaying && currentTrack.title === ep.title;
 
           return (
@@ -45,24 +63,26 @@ export default function PodcastsPage() {
                   </div>
                   <div>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
-                      {ep.showName} • {ep.episodeNumber}
+                      {ep.showName || 'Strategic Podcast'} • {ep.episodeNumber || 'Exclusive Episode'}
                     </span>
                     <h2 className="text-base md:text-lg font-bold text-slate-900 leading-snug font-serif">
                       {ep.title}
                     </h2>
                     <span className="text-xs text-slate-500 font-mono mt-1 block font-medium">
-                      {ep.publishDate} • {ep.duration}
+                      {ep.publishDate || ep.date || 'Recent Broadcast'} • {ep.duration}
                     </span>
                   </div>
                 </div>
 
                 <p className="text-xs md:text-sm text-slate-600 leading-relaxed">
-                  {ep.description}
+                  {ep.description || ep.summary}
                 </p>
 
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1">
                   <div>Host: <strong className="text-slate-900">{ep.host}</strong></div>
-                  <div>Special Guest: <strong className="text-amber-900">{ep.guest}</strong></div>
+                  {ep.guest && (
+                    <div>Special Guest: <strong className="text-amber-900">{ep.guest}</strong></div>
+                  )}
                 </div>
               </div>
 
@@ -70,7 +90,7 @@ export default function PodcastsPage() {
                 <button
                   onClick={() => togglePlay({
                     title: ep.title,
-                    subtitle: ep.showName,
+                    subtitle: ep.showName || 'Public Intel Podcast',
                     host: ep.host,
                     url: ep.audioUrl,
                     fallbackUrl: ep.audioUrl,
@@ -83,7 +103,7 @@ export default function PodcastsPage() {
                 </button>
 
                 <span className="text-xs text-slate-500 font-mono font-medium">
-                  {ep.downloads} Total Listens
+                  {ep.downloads || '1.2k+'} Total Listens
                 </span>
               </div>
             </div>
