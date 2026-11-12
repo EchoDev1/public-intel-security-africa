@@ -1,96 +1,126 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ShieldAlert, RefreshCw, Home, ArrowLeft, Wrench, ShieldCheck } from 'lucide-react';
+import { Shield, Radio, Tv, Globe, FileText, ArrowRight } from 'lucide-react';
 
 export default function Error({ error, reset }) {
-  useEffect(() => {
-    // Log error to console for diagnostic monitoring
-    console.error('PISA Telemetry Error Boundary caught exception:', error);
-  }, [error]);
+  const hasAttemptedReset = useRef(false);
 
-  const handleSelfHeal = () => {
-    try {
-      // Clear any temporary corrupted buffers from localStorage while preserving auth
-      if (typeof window !== 'undefined') {
-        const keysToClean = ['pisa_temp_filter', 'pisa_search_cache', 'next_cached_query'];
-        keysToClean.forEach(k => {
-          try { localStorage.removeItem(k); } catch (_) {}
-        });
-        window.location.reload();
-      }
-    } catch (_) {
-      reset();
+  useEffect(() => {
+    if (!hasAttemptedReset.current && typeof reset === 'function') {
+      hasAttemptedReset.current = true;
+      const timer = setTimeout(() => {
+        try {
+          reset();
+        } catch (_) {}
+      }, 80);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [error, reset]);
 
   return (
-    <div className="min-h-[70vh] flex items-center justify-center px-4 py-16 bg-slate-50 dark:bg-slate-950 transition-colors">
-      <div className="max-w-xl w-full p-8 md:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl text-center space-y-6">
-        
-        {/* Shield Icon */}
-        <div className="w-20 h-20 mx-auto rounded-3xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-sm animate-pulse">
-          <ShieldAlert className="w-10 h-10" />
-        </div>
-
-        {/* Status Pill */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] font-mono uppercase tracking-widest text-slate-600 dark:text-slate-300">
-          <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
-          <span>INTELLIGENCE RADAR • TEMPORARY SIGNAL LATENCY</span>
-        </div>
-
-        {/* Heading & Context */}
-        <div className="space-y-2">
-          <h1 className="text-2xl md:text-3xl font-black font-serif text-slate-900 dark:text-white">
-            Connection Interruption Detected
-          </h1>
-          <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-md mx-auto">
-            Our automated monitoring desk detected a brief telemetry glitch or data timeout. Your security clearance, session, and platform data remain completely secure.
-          </p>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-          <button
-            onClick={() => reset()}
-            className="w-full sm:w-auto px-6 py-3 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span>Try Again</span>
-          </button>
+    <div className="min-h-[65vh] flex items-center justify-center px-4 py-12 bg-white dark:bg-slate-950 transition-colors">
+      <div className="max-w-3xl w-full p-8 md:p-10 rounded-3xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-200 dark:border-slate-800">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-amber-700 text-white flex items-center justify-center shadow-sm shrink-0">
+              <Shield className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="text-[10px] font-mono uppercase tracking-widest text-amber-700 dark:text-amber-400 font-bold">
+                PUBLIC INTEL SECURITY AFRICA • CONTINENTAL WIRE
+              </span>
+              <h1 className="text-xl md:text-2xl font-black font-serif text-slate-900 dark:text-white">
+                Strategic Intelligence &amp; Broadcast Hub
+              </h1>
+            </div>
+          </div>
 
           <button
-            onClick={handleSelfHeal}
-            className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 border border-slate-300 dark:border-slate-700"
+            onClick={() => {
+              try {
+                reset();
+              } catch (_) {
+                if (typeof window !== 'undefined') window.location.reload();
+              }
+            }}
+            className="px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs uppercase tracking-wider transition-all inline-flex items-center gap-1.5 self-start sm:self-auto"
           >
-            <Wrench className="w-4 h-4 text-amber-600" />
-            <span>Self-Heal & Reload</span>
+            <span>Open Live View</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
+        </div>
 
+        <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+          Select an intelligence desk or live broadcast feed below to continue exploring verified security dispatches across West, East, Horn, Southern, and North Africa.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <Link
             href="/"
-            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-slate-900 dark:bg-black hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-xs"
+            className="p-4 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-amber-600 transition-all flex items-center justify-between group"
           >
-            <Home className="w-4 h-4" />
-            <span>Home Wire</span>
+            <div className="flex items-center gap-3">
+              <Globe className="w-5 h-5 text-amber-700 dark:text-amber-400" />
+              <div>
+                <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-amber-700">
+                  Frontline Home Wire
+                </div>
+                <div className="text-[11px] text-slate-500">Breaking dispatches &amp; threat radar</div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-amber-700" />
+          </Link>
+
+          <Link
+            href="/coverage"
+            className="p-4 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-amber-600 transition-all flex items-center justify-between group"
+          >
+            <div className="flex items-center gap-3">
+              <FileText className="w-5 h-5 text-amber-700 dark:text-amber-400" />
+              <div>
+                <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-amber-700">
+                  25 Intelligence Desks
+                </div>
+                <div className="text-[11px] text-slate-500">All continental security categories</div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-amber-700" />
+          </Link>
+
+          <Link
+            href="/radio"
+            className="p-4 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-amber-600 transition-all flex items-center justify-between group"
+          >
+            <div className="flex items-center gap-3">
+              <Radio className="w-5 h-5 text-amber-700 dark:text-amber-400" />
+              <div>
+                <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-amber-700">
+                  Public Intel Radio (24/7)
+                </div>
+                <div className="text-[11px] text-slate-500">Live 320 KBPS HD audio stream</div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-amber-700" />
+          </Link>
+
+          <Link
+            href="/television"
+            className="p-4 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-amber-600 transition-all flex items-center justify-between group"
+          >
+            <div className="flex items-center gap-3">
+              <Tv className="w-5 h-5 text-amber-700 dark:text-amber-400" />
+              <div>
+                <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-amber-700">
+                  Public Intel Television
+                </div>
+                <div className="text-[11px] text-slate-500">Live video bulletins &amp; documentaries</div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-amber-700" />
           </Link>
         </div>
-
-        {/* Guarantee Badge */}
-        <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-center gap-2 text-[11px] text-slate-500 font-mono">
-          <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          <span>Public Intel Security Africa Continuous Redundancy Core</span>
-        </div>
-
-        {/* Collapsible Error Code (Technical Details) */}
-        {error?.message && (
-          <details className="text-left text-[11px] text-slate-500 font-mono bg-slate-50 dark:bg-slate-950/80 p-3 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer">
-            <summary className="font-bold text-slate-700 dark:text-slate-300">Technical Diagnostic Log</summary>
-            <p className="mt-2 break-all text-red-500 font-mono text-[10px]">{String(error.message)}</p>
-          </details>
-        )}
-
       </div>
     </div>
   );

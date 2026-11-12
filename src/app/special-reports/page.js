@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Shield } from 'lucide-react';
 import { getLiveArticlesCollection } from '@/lib/articles/manager';
+import { ARTICLES } from '@/lib/data/articles';
 import ArticleCard from '@/components/ArticleCard';
 
 export const dynamic = 'force-dynamic';
@@ -23,8 +24,12 @@ export const metadata = {
 };
 
 export default async function SpecialReportsPage() {
-  const allArticles = await getLiveArticlesCollection();
-  let reports = allArticles.filter(art => art.isSpecialReport);
+  let allArticles = ARTICLES;
+  try {
+    const live = await getLiveArticlesCollection();
+    if (Array.isArray(live)) allArticles = live;
+  } catch (_) {}
+  let reports = allArticles.filter(art => art && art.isSpecialReport);
   if (!reports || reports.length === 0) {
     reports = allArticles.slice(0, 6);
   }

@@ -67,7 +67,8 @@ import {
   FileCode,
   Lock,
   Key,
-  Flame
+  Flame,
+  Handshake
 } from 'lucide-react';
 import SocialIcon from '@/components/SocialIcon';
 import { CATEGORIES, SPECIALIZED_HUBS } from '@/lib/data/categories';
@@ -168,554 +169,6 @@ export default function AdminDashboardPage() {
   const [threatMatrixSource, setThreatMatrixSource] = useState('UN Peace & Security Operations Telemetry');
   const [threatMatrixLastSync, setThreatMatrixLastSync] = useState(null);
   const [isSyncingThreatMatrix, setIsSyncingThreatMatrix] = useState(false);
-
-  const fetchLiveArticles = async () => {
-    try {
-      const res = await fetch('/api/articles', { cache: 'no-store' });
-      const data = await res.json();
-      if (data?.articles) {
-        setArticlesList(data.articles);
-        setRealArticlesCount(data.realCount || 0);
-        setIsDummyPurged(Boolean(data.isDummyPurged));
-
-        // Sync with client-side localStorage and broadcast across open tabs & windows
-        try {
-          const realOnly = data.articles.filter(a => a.isRealUpload);
-          localStorage.setItem('pisa_custom_articles', JSON.stringify(realOnly));
-          const existingMetaRaw = localStorage.getItem('pisa_articles_meta');
-          const existingMeta = existingMetaRaw ? JSON.parse(existingMetaRaw) : {};
-          const mergedDeleted = Array.from(new Set([
-            ...(existingMeta.deletedDummyIds || []),
-            ...(data.deletedDummyIds || [])
-          ]));
-          localStorage.setItem('pisa_articles_meta', JSON.stringify({
-            isDummyPurged: Boolean(data.isDummyPurged),
-            deletedDummyIds: mergedDeleted
-          }));
-          window.dispatchEvent(new CustomEvent('pisa_articles_updated', {
-            detail: { articles: data.articles, isDummyPurged: Boolean(data.isDummyPurged) }
-          }));
-          if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-            const bc = new BroadcastChannel('pisa_articles_channel');
-            bc.postMessage({ articles: data.articles, isDummyPurged: Boolean(data.isDummyPurged) });
-            bc.close();
-          }
-        } catch (_) {}
-      }
-    } catch (_) {}
-  };
-
-  const fetchThreatMatrix = async () => {
-    try {
-      const res = await fetch(`/api/threat-matrix?t=${Date.now()}`, { cache: 'no-store' });
-      const data = await res.json();
-      if (data?.success && Array.isArray(data.sectors) && data.sectors.length > 0) {
-        setThreatRadarList(data.sectors);
-        if (data.continentalThreatLevel) setContinentalThreatLevel(data.continentalThreatLevel);
-        if (typeof data.isAutoSyncEnabled === 'boolean') setIsAutoSyncEnabled(data.isAutoSyncEnabled);
-        if (data.lastSyncSource) setThreatMatrixSource(data.lastSyncSource);
-        if (data.lastSyncTimestamp) setThreatMatrixLastSync(data.lastSyncTimestamp);
-        try {
-          localStorage.setItem('pisa_threat_matrix', JSON.stringify({
-            sectors: data.sectors,
-            continentalThreatLevel: data.continentalThreatLevel
-          }));
-        } catch (_) {}
-      }
-    } catch (_) {}
-  };
-
-  const handleSyncThreatMatrixNow = async () => {
-    setIsSyncingThreatMatrix(true);
-    try {
-      const res = await fetch('/api/threat-matrix', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'sync_now' })
-      });
-      const data = await res.json();
-      if (data?.success && data.data) {
-        const liveSectors = data.data.sectors || [];
-        const liveLevel = data.data.continentalThreatLevel || continentalThreatLevel;
-        setThreatRadarList(liveSectors);
-        if (data.data.continentalThreatLevel) setContinentalThreatLevel(liveLevel);
-        if (data.data.lastSyncSource) setThreatMatrixSource(data.data.lastSyncSource);
-        if (data.data.lastSyncTimestamp) setThreatMatrixLastSync(data.data.lastSyncTimestamp);
-
-        if (typeof window !== 'undefined') {
-          try {
-            localStorage.setItem('pisa_threat_matrix', JSON.stringify({
-              sectors: liveSectors,
-              continentalThreatLevel: liveLevel
-            }));
-            window.dispatchEvent(new CustomEvent('pisa_threat_matrix_updated', {
-              detail: { sectors: liveSectors, continentalThreatLevel: liveLevel }
-            }));
-            if (window.BroadcastChannel) {
-              const bc = new BroadcastChannel('pisa_threat_matrix_channel');
-              bc.postMessage({ sectors: liveSectors, continentalThreatLevel: liveLevel });
-              bc.close();
-            }
-          } catch (_) {}
-        }
-
-        showToast("Threat Matrix synchronized live from UN Peace & Security feeds!");
-      }
-    } catch (_) {
-      showToast("Error synchronizing Threat Matrix.");
-    } finally {
-      setIsSyncingThreatMatrix(false);
-    }
-  };
-
-  const handleToggleAutoSync = async () => {
-    const nextVal = !isAutoSyncEnabled;
-    setIsAutoSyncEnabled(nextVal);
-    try {
-      await fetch('/api/threat-matrix', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'toggle_auto_sync', isAutoSyncEnabled: nextVal })
-      });
-      showToast(`Automated live feed synchronization ${nextVal ? 'ENABLED' : 'PAUSED'}.`);
-    } catch (_) {}
-  };
-
-  const handleSaveFullThreatMatrix = async (updatedSectors, updatedLevel) => {
-    try {
-      const payloadSectors = updatedSectors || threatRadarList;
-      const payloadLevel = updatedLevel || continentalThreatLevel;
-
-      // Broadcast and persist locally immediately for zero lag across tabs
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('pisa_threat_matrix', JSON.stringify({
-            sectors: payloadSectors,
-            continentalThreatLevel: payloadLevel
-          }));
-          window.dispatchEvent(new CustomEvent('pisa_threat_matrix_updated', {
-            detail: { sectors: payloadSectors, continentalThreatLevel: payloadLevel }
-          }));
-          if (window.BroadcastChannel) {
-            const bc = new BroadcastChannel('pisa_threat_matrix_channel');
-            bc.postMessage({ sectors: payloadSectors, continentalThreatLevel: payloadLevel });
-            bc.close();
-          }
-        } catch (_) {}
-      }
-
-      const res = await fetch('/api/threat-matrix', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'save_all',
-          sectors: payloadSectors,
-          continentalThreatLevel: payloadLevel,
-          isAutoSyncEnabled
-        })
-      });
-      const resData = await res.json();
-      if (resData?.data?.sectors) {
-        setThreatRadarList(resData.data.sectors);
-        if (resData.data.continentalThreatLevel) {
-          setContinentalThreatLevel(resData.data.continentalThreatLevel);
-        }
-      }
-    } catch (_) {}
-  };
-
-  const fetchPartnerships = async () => {
-    try {
-      const res = await fetch(`/api/partnerships?t=${Date.now()}`, { cache: 'no-store' });
-      const data = await res.json();
-      if (data?.success) {
-        if (Array.isArray(data.inquiries)) setPartnershipInquiries(data.inquiries);
-        if (Array.isArray(data.partnerships) && data.partnerships.length > 0) setPartnerships(data.partnerships);
-        if (Array.isArray(data.bureauContacts) && data.bureauContacts.length > 0) setBureauContacts(data.bureauContacts);
-      }
-    } catch (_) {}
-  };
-
-  const fetchTraining = async () => {
-    try {
-      const res = await fetch(`/api/training?t=${Date.now()}`, { cache: 'no-store' });
-      const data = await res.json();
-      if (data?.success) {
-        if (Array.isArray(data.courses) && data.courses.length > 0) setCoursesList(data.courses);
-        if (Array.isArray(data.enlisters) && data.enlisters.length > 0) setEnlistersList(data.enlisters);
-        if (data.paymentGatewaySettings) setPaymentGatewaySettings(data.paymentGatewaySettings);
-      }
-    } catch (_) {}
-  };
-
-  const fetchBroadcastMedia = async () => {
-    try {
-      const res = await fetch(`/api/broadcast-media?t=${Date.now()}`, { cache: 'no-store' });
-      const data = await res.json();
-      if (data?.success) {
-        if (Array.isArray(data.tvChannels) && data.tvChannels.length > 0) setTvChannels(data.tvChannels);
-        if (Array.isArray(data.radioChannels) && data.radioChannels.length > 0) setRadioChannels(data.radioChannels);
-        if (Array.isArray(data.podcastShows) && data.podcastShows.length > 0) setPodcastShows(data.podcastShows);
-      }
-    } catch (_) {}
-  };
-
-  const fetchWebinars = async () => {
-    try {
-      const res = await fetch(`/api/webinars?t=${Date.now()}`, { cache: 'no-store' });
-      const data = await res.json();
-      if (data?.success && Array.isArray(data.webinars) && data.webinars.length > 0) {
-        setWebinars(data.webinars);
-      }
-    } catch (_) {}
-  };
-
-  const fetchWomenInSecurity = async () => {
-    try {
-      const res = await fetch(`/api/women-in-security?t=${Date.now()}`, { cache: 'no-store' });
-      const data = await res.json();
-      if (data?.success && Array.isArray(data.profiles) && data.profiles.length > 0) {
-        setWomenList(data.profiles);
-      }
-    } catch (_) {}
-  };
-
-  const handleSaveCourses = async (updatedCourses) => {
-    try {
-      await fetch('/api/training', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save_courses', courses: updatedCourses })
-      });
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('pisa_training_updated'));
-      }
-    } catch (_) {}
-  };
-
-  const handleSaveEnlisters = async (updatedEnlisters) => {
-    try {
-      await fetch('/api/training', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save_enlisters', enlisters: updatedEnlisters })
-      });
-    } catch (_) {}
-  };
-
-  const handleSaveGateway = async (updatedGateway) => {
-    try {
-      await fetch('/api/training', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save_gateway', paymentGatewaySettings: updatedGateway })
-      });
-    } catch (_) {}
-  };
-
-  const handleSavePartnerships = async (updatedPartnerships) => {
-    try {
-      await fetch('/api/partnerships', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save_partnerships', partnerships: updatedPartnerships })
-      });
-    } catch (_) {}
-  };
-
-  const handleSaveBureaus = async (updatedBureaus) => {
-    try {
-      await fetch('/api/partnerships', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save_bureaus', bureauContacts: updatedBureaus })
-      });
-    } catch (_) {}
-  };
-
-  const handleUpdateInquiryStatus = async (id, status) => {
-    try {
-      setPartnershipInquiries(prev => prev.map(inq => inq.id === id ? { ...inq, status } : inq));
-      await fetch('/api/partnerships', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update_inquiry_status', id, status })
-      });
-      showToast(`Inquiry marked as: ${status}`);
-    } catch (_) {}
-  };
-
-  const handleDeleteInquiry = async (id) => {
-    try {
-      setPartnershipInquiries(prev => prev.filter(inq => inq.id !== id));
-      await fetch('/api/partnerships', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete_inquiry', id })
-      });
-      showToast('Inquiry removed.');
-    } catch (_) {}
-  };
-
-  const handleSaveBroadcastMedia = async (tv, radio, podcasts) => {
-    try {
-      await fetch('/api/broadcast-media', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tvChannels: tv || tvChannels,
-          radioChannels: radio || radioChannels,
-          podcastShows: podcasts || podcastShows
-        })
-      });
-    } catch (_) {}
-  };
-
-  const handleSaveWebinars = async (updatedWebinars) => {
-    try {
-      await fetch('/api/webinars', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ webinars: updatedWebinars })
-      });
-    } catch (_) {}
-  };
-
-  const handleSaveWomenInSecurity = async (updatedWomen) => {
-    try {
-      await fetch('/api/women-in-security', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profiles: updatedWomen })
-      });
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('pisa_women_in_security_updated'));
-      }
-    } catch (_) {}
-  };
-
-  const fetchPlatformConfig = async () => {
-    try {
-      const res = await fetch('/api/platform-config');
-      const data = await res.json();
-      if (data?.success) {
-        if (data.headerSettings) setHeaderSettings(data.headerSettings);
-        if (data.footerSettings) setFooterSettings(data.footerSettings);
-        if (Array.isArray(data.socialLinks) && data.socialLinks.length > 0) setSocialLinks(data.socialLinks);
-        if (Array.isArray(data.specializedDivisions) && data.specializedDivisions.length > 0) setSpecializedDivisions(data.specializedDivisions);
-        if (Array.isArray(data.editorialTeam) && data.editorialTeam.length > 0) setEditorialTeam(data.editorialTeam);
-      }
-    } catch (_) {}
-  };
-
-  const fetchNewsletter = async () => {
-    try {
-      const res = await fetch('/api/newsletter');
-      const data = await res.json();
-      if (data?.success) {
-        if (data.settings) setNewsletterSettings(data.settings);
-        if (Array.isArray(data.subscribers) && data.subscribers.length > 0) setSubscribers(data.subscribers);
-      }
-    } catch (_) {}
-  };
-
-  const handleSaveHeader = async (settings) => {
-    try {
-      const payload = settings || headerSettings;
-      await fetch('/api/platform-config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save_header', data: payload })
-      });
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('pisa_header_updated', { detail: payload }));
-      }
-      showToast('Header & Breaking Ticker saved successfully!');
-    } catch (_) {
-      showToast('Error saving header settings.');
-    }
-  };
-
-  const handleSaveFooter = async (settings) => {
-    try {
-      const payload = settings || footerSettings;
-      await fetch('/api/platform-config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save_footer', data: payload })
-      });
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('pisa_footer_updated', { detail: payload }));
-      }
-      showToast('Footer details and bureau directory updated live!');
-    } catch (_) {
-      showToast('Error saving footer settings.');
-    }
-  };
-
-  const handleSaveNewsletter = async (settings) => {
-    try {
-      const payload = settings || newsletterSettings;
-      await fetch('/api/newsletter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save_settings', settings: payload })
-      });
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('pisa_newsletter_settings_updated', { detail: payload }));
-      }
-      showToast('Newsletter settings updated and synced live!');
-    } catch (_) {
-      showToast('Error saving newsletter settings.');
-    }
-  };
-
-  const handleDeleteSubscriber = async (id, email) => {
-    try {
-      setSubscribers(prev => prev.filter(s => s.id !== id && s.email !== email));
-      await fetch('/api/newsletter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete_subscriber', id, email })
-      });
-      showToast('Subscriber removed successfully.');
-    } catch (_) {}
-  };
-
-  const handleSaveSocials = async (links) => {
-    try {
-      const payload = links || socialLinks;
-      await fetch('/api/platform-config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save_socials', data: payload })
-      });
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('pisa_social_links_updated', { detail: payload }));
-      }
-    } catch (_) {}
-  };
-
-  const handleSaveDivisions = async (divisions) => {
-    try {
-      const payload = divisions || specializedDivisions;
-      await fetch('/api/platform-config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save_divisions', data: payload })
-      });
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('pisa_divisions_updated', { detail: payload }));
-      }
-    } catch (_) {}
-  };
-
-  const handleSaveEditorialTeam = async (team) => {
-    try {
-      const payload = team || editorialTeam;
-      await fetch('/api/platform-config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save_editorial_team', data: payload })
-      });
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('pisa_editorial_team_updated', { detail: payload }));
-      }
-    } catch (_) {}
-  };
-
-  useEffect(() => {
-    fetchLiveArticles();
-    fetchThreatMatrix();
-    fetchPartnerships();
-    fetchTraining();
-    fetchBroadcastMedia();
-    fetchWebinars();
-    fetchWomenInSecurity();
-    fetchPlatformConfig();
-    fetchNewsletter();
-
-    const handleInquiries = () => fetchPartnerships();
-    const handleTrainingUpdate = () => fetchTraining();
-    window.addEventListener('pisa_inquiries_updated', handleInquiries);
-    window.addEventListener('pisa_training_updated', handleTrainingUpdate);
-
-    return () => {
-      window.removeEventListener('pisa_inquiries_updated', handleInquiries);
-      window.removeEventListener('pisa_training_updated', handleTrainingUpdate);
-    };
-  }, []);
-
-  const handlePurgeAllDummy = async () => {
-    if (!window.confirm("Are you sure you want to permanently delete all sample/dummy news articles? Only real uploaded articles will remain on the platform.")) {
-      return;
-    }
-    // Optimistic purge update
-    setIsDummyPurged(true);
-    setArticlesList(prev => prev.filter(a => a.isRealUpload));
-    try {
-      const res = await fetch('/api/articles?action=purge_dummy', { method: 'DELETE' });
-      const data = await res.json();
-      if (data?.success) {
-        showToast("All sample/dummy news articles removed permanently!");
-        fetchLiveArticles();
-      }
-    } catch (_) {
-      showToast("Error purging dummy articles.");
-    }
-  };
-
-  const handleDeleteArticle = async (articleId, articleSlug) => {
-    if (!window.confirm("Are you sure you want to delete this article?")) return;
-    const targetId = articleId || articleSlug;
-    const targetSlug = articleSlug || articleId;
-
-    // 1. Instant optimistic local UI removal: zero lag!
-    setArticlesList(prev => prev.filter(a => 
-      a.id !== targetId && a.slug !== targetSlug && a.id !== targetSlug && a.slug !== targetId
-    ));
-    setRealArticlesCount(prev => Math.max(0, prev - 1));
-
-    // 2. Instant client localStorage sync and broadcast across tabs
-    try {
-      const raw = localStorage.getItem('pisa_custom_articles');
-      if (raw) {
-        const list = JSON.parse(raw);
-        const filtered = list.filter(a => 
-          a.id !== targetId && a.slug !== targetSlug && a.id !== targetSlug && a.slug !== targetId
-        );
-        localStorage.setItem('pisa_custom_articles', JSON.stringify(filtered));
-      }
-      const metaRaw = localStorage.getItem('pisa_articles_meta');
-      const meta = metaRaw ? JSON.parse(metaRaw) : { isDummyPurged: false, deletedDummyIds: [] };
-      if (!Array.isArray(meta.deletedDummyIds)) meta.deletedDummyIds = [];
-      if (targetId && !meta.deletedDummyIds.includes(targetId)) meta.deletedDummyIds.push(targetId);
-      if (targetSlug && !meta.deletedDummyIds.includes(targetSlug)) meta.deletedDummyIds.push(targetSlug);
-      localStorage.setItem('pisa_articles_meta', JSON.stringify(meta));
-
-      window.dispatchEvent(new CustomEvent('pisa_articles_updated', {
-        detail: { deletedId: targetId, deletedSlug: targetSlug }
-      }));
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        const bc = new BroadcastChannel('pisa_articles_channel');
-        bc.postMessage({ deletedId: targetId, deletedSlug: targetSlug });
-        bc.close();
-      }
-    } catch (_) {}
-
-    showToast("Article deleted permanently.");
-
-    // 3. Network delete to database & server
-    try {
-      const res = await fetch(`/api/articles?id=${encodeURIComponent(targetId)}&slug=${encodeURIComponent(targetSlug)}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data?.success) {
-        fetchLiveArticles();
-      } else {
-        fetchLiveArticles();
-      }
-    } catch (_) {}
-  };
 
   // Form State: Write New Article / Special Report
   const [newArticle, setNewArticle] = useState({
@@ -1382,13 +835,561 @@ export default function AdminDashboardPage() {
   // 16. SECURITY AUDIT & ACTIVITY LOGS
   // -------------------------------------------------------------
   const [auditLogs, setAuditLogs] = useState([
-    { id: 'log-01', timestamp: new Date(Date.now() - 5 * 60000).toLocaleTimeString(), date: new Date().toLocaleDateString(), operative: 'Lady Dakore Ekpendu', action: 'Newsroom CMS Session Initialized', target: 'Super Admin Control Center', status: 'Authorized', category: 'Authentication' },
-    { id: 'log-02', timestamp: new Date(Date.now() - 35 * 60000).toLocaleTimeString(), date: new Date().toLocaleDateString(), operative: 'Lady Dakore Ekpendu', action: 'Threat Matrix Level Updated', target: 'Gulf of Guinea Littoral (Elevated 6.4)', status: 'Success', category: 'Situational Awareness' },
-    { id: 'log-03', timestamp: new Date(Date.now() - 120 * 60000).toLocaleTimeString(), date: new Date().toLocaleDateString(), operative: 'Newsroom Desk', action: 'Citizen Whistleblower Tip Approved', target: 'PI-TIP-01 (Gulf of Guinea Pipeline)', status: 'Verified', category: 'Verification Desk' },
-    { id: 'log-04', timestamp: new Date(Date.now() - 240 * 60000).toLocaleTimeString(), date: new Date().toLocaleDateString(), operative: 'Lady Dakore Ekpendu', action: 'Special Investigative Report Published', target: 'Cross-Border Arms Smuggling Corridors', status: 'Published', category: 'Publishing' },
-    { id: 'log-05', timestamp: new Date(Date.now() - 360 * 60000).toLocaleTimeString(), date: new Date().toLocaleDateString(), operative: 'System Automated Sentinel', action: 'Next.js 16 Route Optimization & Edge Health Check', target: '71 Dynamic Endpoints', status: 'Healthy (99.98%)', category: 'Infrastructure' }
+    { id: 'log-01', timestamp: '08:55:00 UTC', date: '2026-11-12', operative: 'Lady Dakore Ekpendu', action: 'Newsroom CMS Session Initialized', target: 'Super Admin Control Center', status: 'Authorized', category: 'Authentication' },
+    { id: 'log-02', timestamp: '08:25:00 UTC', date: '2026-11-12', operative: 'Lady Dakore Ekpendu', action: 'Threat Matrix Level Updated', target: 'Gulf of Guinea Littoral (Elevated 6.4)', status: 'Success', category: 'Situational Awareness' },
+    { id: 'log-03', timestamp: '07:00:00 UTC', date: '2026-11-12', operative: 'Newsroom Desk', action: 'Citizen Whistleblower Tip Approved', target: 'PI-TIP-01 (Gulf of Guinea Pipeline)', status: 'Verified', category: 'Verification Desk' },
+    { id: 'log-04', timestamp: '05:00:00 UTC', date: '2026-11-12', operative: 'Lady Dakore Ekpendu', action: 'Special Investigative Report Published', target: 'Cross-Border Arms Smuggling Corridors', status: 'Published', category: 'Publishing' },
+    { id: 'log-05', timestamp: '03:00:00 UTC', date: '2026-11-12', operative: 'System Automated Sentinel', action: 'Next.js 16 Route Optimization & Edge Health Check', target: '71 Dynamic Endpoints', status: 'Healthy (99.98%)', category: 'Infrastructure' }
   ]);
   const [auditFilter, setAuditFilter] = useState('All');
+
+  const fetchLiveArticles = async () => {
+    try {
+      const res = await fetch('/api/articles', { cache: 'no-store' });
+      const data = await res.json();
+      if (data?.articles) {
+        setArticlesList(data.articles);
+        setRealArticlesCount(data.realCount || 0);
+        setIsDummyPurged(Boolean(data.isDummyPurged));
+
+        // Sync with client-side localStorage and broadcast across open tabs & windows
+        try {
+          const realOnly = data.articles.filter(a => a.isRealUpload);
+          localStorage.setItem('pisa_custom_articles', JSON.stringify(realOnly));
+          const existingMetaRaw = localStorage.getItem('pisa_articles_meta');
+          const existingMeta = existingMetaRaw ? JSON.parse(existingMetaRaw) : {};
+          const mergedDeleted = Array.from(new Set([
+            ...(existingMeta.deletedDummyIds || []),
+            ...(data.deletedDummyIds || [])
+          ]));
+          localStorage.setItem('pisa_articles_meta', JSON.stringify({
+            isDummyPurged: Boolean(data.isDummyPurged),
+            deletedDummyIds: mergedDeleted
+          }));
+          window.dispatchEvent(new CustomEvent('pisa_articles_updated', {
+            detail: { articles: data.articles, isDummyPurged: Boolean(data.isDummyPurged) }
+          }));
+          if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+            const bc = new BroadcastChannel('pisa_articles_channel');
+            bc.postMessage({ articles: data.articles, isDummyPurged: Boolean(data.isDummyPurged) });
+            bc.close();
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
+  };
+
+  const fetchThreatMatrix = async () => {
+    try {
+      const res = await fetch('/api/threat-matrix', { cache: 'no-store' });
+      const data = await res.json();
+      if (data?.success && Array.isArray(data.sectors) && data.sectors.length > 0) {
+        setThreatRadarList(data.sectors);
+        if (data.continentalThreatLevel) setContinentalThreatLevel(data.continentalThreatLevel);
+        if (typeof data.isAutoSyncEnabled === 'boolean') setIsAutoSyncEnabled(data.isAutoSyncEnabled);
+        if (data.lastSyncSource) setThreatMatrixSource(data.lastSyncSource);
+        if (data.lastSyncTimestamp) setThreatMatrixLastSync(data.lastSyncTimestamp);
+        try {
+          localStorage.setItem('pisa_threat_matrix', JSON.stringify({
+            sectors: data.sectors,
+            continentalThreatLevel: data.continentalThreatLevel
+          }));
+        } catch (_) {}
+      }
+    } catch (_) {}
+  };
+
+  const handleSyncThreatMatrixNow = async () => {
+    setIsSyncingThreatMatrix(true);
+    try {
+      const res = await fetch('/api/threat-matrix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sync_now' })
+      });
+      const data = await res.json();
+      if (data?.success && data.data) {
+        const liveSectors = data.data.sectors || [];
+        const liveLevel = data.data.continentalThreatLevel || continentalThreatLevel;
+        setThreatRadarList(liveSectors);
+        if (data.data.continentalThreatLevel) setContinentalThreatLevel(liveLevel);
+        if (data.data.lastSyncSource) setThreatMatrixSource(data.data.lastSyncSource);
+        if (data.data.lastSyncTimestamp) setThreatMatrixLastSync(data.data.lastSyncTimestamp);
+
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('pisa_threat_matrix', JSON.stringify({
+              sectors: liveSectors,
+              continentalThreatLevel: liveLevel
+            }));
+            window.dispatchEvent(new CustomEvent('pisa_threat_matrix_updated', {
+              detail: { sectors: liveSectors, continentalThreatLevel: liveLevel }
+            }));
+            if (window.BroadcastChannel) {
+              const bc = new BroadcastChannel('pisa_threat_matrix_channel');
+              bc.postMessage({ sectors: liveSectors, continentalThreatLevel: liveLevel });
+              bc.close();
+            }
+          } catch (_) {}
+        }
+
+        showToast("Threat Matrix synchronized live from UN Peace & Security feeds!");
+      }
+    } catch (_) {
+      showToast("Error synchronizing Threat Matrix.");
+    } finally {
+      setIsSyncingThreatMatrix(false);
+    }
+  };
+
+  const handleToggleAutoSync = async () => {
+    const nextVal = !isAutoSyncEnabled;
+    setIsAutoSyncEnabled(nextVal);
+    try {
+      await fetch('/api/threat-matrix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle_auto_sync', isAutoSyncEnabled: nextVal })
+      });
+      showToast(`Automated live feed synchronization ${nextVal ? 'ENABLED' : 'PAUSED'}.`);
+    } catch (_) {}
+  };
+
+  const handleSaveFullThreatMatrix = async (updatedSectors, updatedLevel) => {
+    try {
+      const payloadSectors = updatedSectors || threatRadarList;
+      const payloadLevel = updatedLevel || continentalThreatLevel;
+
+      // Broadcast and persist locally immediately for zero lag across tabs
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('pisa_threat_matrix', JSON.stringify({
+            sectors: payloadSectors,
+            continentalThreatLevel: payloadLevel
+          }));
+          window.dispatchEvent(new CustomEvent('pisa_threat_matrix_updated', {
+            detail: { sectors: payloadSectors, continentalThreatLevel: payloadLevel }
+          }));
+          if (window.BroadcastChannel) {
+            const bc = new BroadcastChannel('pisa_threat_matrix_channel');
+            bc.postMessage({ sectors: payloadSectors, continentalThreatLevel: payloadLevel });
+            bc.close();
+          }
+        } catch (_) {}
+      }
+
+      const res = await fetch('/api/threat-matrix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save_all',
+          sectors: payloadSectors,
+          continentalThreatLevel: payloadLevel,
+          isAutoSyncEnabled
+        })
+      });
+      const resData = await res.json();
+      if (resData?.data?.sectors) {
+        setThreatRadarList(resData.data.sectors);
+        if (resData.data.continentalThreatLevel) {
+          setContinentalThreatLevel(resData.data.continentalThreatLevel);
+        }
+      }
+    } catch (_) {}
+  };
+
+  const fetchPartnerships = async () => {
+    try {
+      const res = await fetch('/api/partnerships', { cache: 'no-store' });
+      const data = await res.json();
+      if (data?.success) {
+        if (Array.isArray(data.inquiries)) setPartnershipInquiries(data.inquiries);
+        if (Array.isArray(data.partnerships) && data.partnerships.length > 0) setPartnerships(data.partnerships);
+        if (Array.isArray(data.bureauContacts) && data.bureauContacts.length > 0) setBureauContacts(data.bureauContacts);
+      }
+    } catch (_) {}
+  };
+
+  const fetchTraining = async () => {
+    try {
+      const res = await fetch('/api/training', { cache: 'no-store' });
+      const data = await res.json();
+      if (data?.success) {
+        if (Array.isArray(data.courses) && data.courses.length > 0) setCoursesList(data.courses);
+        if (Array.isArray(data.enlisters) && data.enlisters.length > 0) setEnlistersList(data.enlisters);
+        if (data.paymentGatewaySettings) setPaymentGatewaySettings(data.paymentGatewaySettings);
+      }
+    } catch (_) {}
+  };
+
+  const fetchBroadcastMedia = async () => {
+    try {
+      const res = await fetch('/api/broadcast-media', { cache: 'no-store' });
+      const data = await res.json();
+      if (data?.success) {
+        if (Array.isArray(data.tvChannels) && data.tvChannels.length > 0) setTvChannels(data.tvChannels);
+        if (Array.isArray(data.radioChannels) && data.radioChannels.length > 0) setRadioChannels(data.radioChannels);
+        if (Array.isArray(data.podcastShows) && data.podcastShows.length > 0) setPodcastShows(data.podcastShows);
+      }
+    } catch (_) {}
+  };
+
+  const fetchWebinars = async () => {
+    try {
+      const res = await fetch('/api/webinars', { cache: 'no-store' });
+      const data = await res.json();
+      if (data?.success && Array.isArray(data.webinars) && data.webinars.length > 0) {
+        setWebinars(data.webinars);
+      }
+    } catch (_) {}
+  };
+
+  const fetchWomenInSecurity = async () => {
+    try {
+      const res = await fetch('/api/women-in-security', { cache: 'no-store' });
+      const data = await res.json();
+      if (data?.success && Array.isArray(data.profiles) && data.profiles.length > 0) {
+        setWomenList(data.profiles);
+      }
+    } catch (_) {}
+  };
+
+  const handleSaveCourses = async (updatedCourses) => {
+    try {
+      await fetch('/api/training', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_courses', courses: updatedCourses })
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pisa_training_updated'));
+      }
+    } catch (_) {}
+  };
+
+  const handleSaveEnlisters = async (updatedEnlisters) => {
+    try {
+      await fetch('/api/training', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_enlisters', enlisters: updatedEnlisters })
+      });
+    } catch (_) {}
+  };
+
+  const handleSaveGateway = async (updatedGateway) => {
+    try {
+      await fetch('/api/training', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_gateway', paymentGatewaySettings: updatedGateway })
+      });
+    } catch (_) {}
+  };
+
+  const handleSavePartnerships = async (updatedPartnerships) => {
+    try {
+      await fetch('/api/partnerships', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_partnerships', partnerships: updatedPartnerships })
+      });
+    } catch (_) {}
+  };
+
+  const handleSaveBureaus = async (updatedBureaus) => {
+    try {
+      await fetch('/api/partnerships', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_bureaus', bureauContacts: updatedBureaus })
+      });
+    } catch (_) {}
+  };
+
+  const handleUpdateInquiryStatus = async (id, status) => {
+    try {
+      setPartnershipInquiries(prev => prev.map(inq => inq.id === id ? { ...inq, status } : inq));
+      await fetch('/api/partnerships', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_inquiry_status', id, status })
+      });
+      showToast(`Inquiry marked as: ${status}`);
+    } catch (_) {}
+  };
+
+  const handleDeleteInquiry = async (id) => {
+    try {
+      setPartnershipInquiries(prev => prev.filter(inq => inq.id !== id));
+      await fetch('/api/partnerships', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_inquiry', id })
+      });
+      showToast('Inquiry removed.');
+    } catch (_) {}
+  };
+
+  const handleSaveBroadcastMedia = async (tv, radio, podcasts) => {
+    try {
+      await fetch('/api/broadcast-media', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tvChannels: tv || tvChannels,
+          radioChannels: radio || radioChannels,
+          podcastShows: podcasts || podcastShows
+        })
+      });
+    } catch (_) {}
+  };
+
+  const handleSaveWebinars = async (updatedWebinars) => {
+    try {
+      await fetch('/api/webinars', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ webinars: updatedWebinars })
+      });
+    } catch (_) {}
+  };
+
+  const handleSaveWomenInSecurity = async (updatedWomen) => {
+    try {
+      await fetch('/api/women-in-security', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profiles: updatedWomen })
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pisa_women_in_security_updated'));
+      }
+    } catch (_) {}
+  };
+
+  const fetchPlatformConfig = async () => {
+    try {
+      const res = await fetch('/api/platform-config');
+      const data = await res.json();
+      if (data?.success) {
+        if (data.headerSettings) setHeaderSettings(data.headerSettings);
+        if (data.footerSettings) setFooterSettings(data.footerSettings);
+        if (Array.isArray(data.socialLinks) && data.socialLinks.length > 0) setSocialLinks(data.socialLinks);
+        if (Array.isArray(data.specializedDivisions) && data.specializedDivisions.length > 0) setSpecializedDivisions(data.specializedDivisions);
+        if (Array.isArray(data.editorialTeam) && data.editorialTeam.length > 0) setEditorialTeam(data.editorialTeam);
+      }
+    } catch (_) {}
+  };
+
+  const fetchNewsletter = async () => {
+    try {
+      const res = await fetch('/api/newsletter');
+      const data = await res.json();
+      if (data?.success) {
+        if (data.settings) setNewsletterSettings(data.settings);
+        if (Array.isArray(data.subscribers) && data.subscribers.length > 0) setSubscribers(data.subscribers);
+      }
+    } catch (_) {}
+  };
+
+  const handleSaveHeader = async (settings) => {
+    try {
+      const payload = settings || headerSettings;
+      await fetch('/api/platform-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_header', data: payload })
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pisa_header_updated', { detail: payload }));
+      }
+      showToast('Header & Breaking Ticker saved successfully!');
+    } catch (_) {
+      showToast('Error saving header settings.');
+    }
+  };
+
+  const handleSaveFooter = async (settings) => {
+    try {
+      const payload = settings || footerSettings;
+      await fetch('/api/platform-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_footer', data: payload })
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pisa_footer_updated', { detail: payload }));
+      }
+      showToast('Footer details and bureau directory updated live!');
+    } catch (_) {
+      showToast('Error saving footer settings.');
+    }
+  };
+
+  const handleSaveNewsletter = async (settings) => {
+    try {
+      const payload = settings || newsletterSettings;
+      await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_settings', settings: payload })
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pisa_newsletter_settings_updated', { detail: payload }));
+      }
+      showToast('Newsletter settings updated and synced live!');
+    } catch (_) {
+      showToast('Error saving newsletter settings.');
+    }
+  };
+
+  const handleDeleteSubscriber = async (id, email) => {
+    try {
+      setSubscribers(prev => prev.filter(s => s.id !== id && s.email !== email));
+      await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_subscriber', id, email })
+      });
+      showToast('Subscriber removed successfully.');
+    } catch (_) {}
+  };
+
+  const handleSaveSocials = async (links) => {
+    try {
+      const payload = links || socialLinks;
+      await fetch('/api/platform-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_socials', data: payload })
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pisa_social_links_updated', { detail: payload }));
+      }
+    } catch (_) {}
+  };
+
+  const handleSaveDivisions = async (divisions) => {
+    try {
+      const payload = divisions || specializedDivisions;
+      await fetch('/api/platform-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_divisions', data: payload })
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pisa_divisions_updated', { detail: payload }));
+      }
+    } catch (_) {}
+  };
+
+  const handleSaveEditorialTeam = async (team) => {
+    try {
+      const payload = team || editorialTeam;
+      await fetch('/api/platform-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_editorial_team', data: payload })
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pisa_editorial_team_updated', { detail: payload }));
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    fetchLiveArticles();
+    fetchThreatMatrix();
+    fetchPartnerships();
+    fetchTraining();
+    fetchBroadcastMedia();
+    fetchWebinars();
+    fetchWomenInSecurity();
+    fetchPlatformConfig();
+    fetchNewsletter();
+
+    const handleInquiries = () => fetchPartnerships();
+    const handleTrainingUpdate = () => fetchTraining();
+    window.addEventListener('pisa_inquiries_updated', handleInquiries);
+    window.addEventListener('pisa_training_updated', handleTrainingUpdate);
+
+    return () => {
+      window.removeEventListener('pisa_inquiries_updated', handleInquiries);
+      window.removeEventListener('pisa_training_updated', handleTrainingUpdate);
+    };
+  }, []);
+
+  const handlePurgeAllDummy = async () => {
+    if (!window.confirm("Are you sure you want to permanently delete all sample/dummy news articles? Only real uploaded articles will remain on the platform.")) {
+      return;
+    }
+    // Optimistic purge update
+    setIsDummyPurged(true);
+    setArticlesList(prev => prev.filter(a => a.isRealUpload));
+    try {
+      const res = await fetch('/api/articles?action=purge_dummy', { method: 'DELETE' });
+      const data = await res.json();
+      if (data?.success) {
+        showToast("All sample/dummy news articles removed permanently!");
+        fetchLiveArticles();
+      }
+    } catch (_) {
+      showToast("Error purging dummy articles.");
+    }
+  };
+
+  const handleDeleteArticle = async (articleId, articleSlug) => {
+    if (!window.confirm("Are you sure you want to delete this article?")) return;
+    const targetId = articleId || articleSlug;
+    const targetSlug = articleSlug || articleId;
+
+    // 1. Instant optimistic local UI removal: zero lag!
+    setArticlesList(prev => prev.filter(a => 
+      a.id !== targetId && a.slug !== targetSlug && a.id !== targetSlug && a.slug !== targetId
+    ));
+    setRealArticlesCount(prev => Math.max(0, prev - 1));
+
+    // 2. Instant client localStorage sync and broadcast across tabs
+    try {
+      const raw = localStorage.getItem('pisa_custom_articles');
+      if (raw) {
+        const list = JSON.parse(raw);
+        const filtered = list.filter(a => 
+          a.id !== targetId && a.slug !== targetSlug && a.id !== targetSlug && a.slug !== targetId
+        );
+        localStorage.setItem('pisa_custom_articles', JSON.stringify(filtered));
+      }
+      const metaRaw = localStorage.getItem('pisa_articles_meta');
+      const meta = metaRaw ? JSON.parse(metaRaw) : { isDummyPurged: false, deletedDummyIds: [] };
+      if (!Array.isArray(meta.deletedDummyIds)) meta.deletedDummyIds = [];
+      if (targetId && !meta.deletedDummyIds.includes(targetId)) meta.deletedDummyIds.push(targetId);
+      if (targetSlug && !meta.deletedDummyIds.includes(targetSlug)) meta.deletedDummyIds.push(targetSlug);
+      localStorage.setItem('pisa_articles_meta', JSON.stringify(meta));
+
+      window.dispatchEvent(new CustomEvent('pisa_articles_updated', {
+        detail: { deletedId: targetId, deletedSlug: targetSlug }
+      }));
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('pisa_articles_channel');
+        bc.postMessage({ deletedId: targetId, deletedSlug: targetSlug });
+        bc.close();
+      }
+    } catch (_) {}
+
+    showToast("Article deleted permanently.");
+
+    // 3. Network delete to database & server
+    try {
+      const res = await fetch(`/api/articles?id=${encodeURIComponent(targetId)}&slug=${encodeURIComponent(targetSlug)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data?.success) {
+        fetchLiveArticles();
+      } else {
+        fetchLiveArticles();
+      }
+    } catch (_) {}
+  };
 
   // -------------------------------------------------------------
   // 17. DATA EXPORT & ARCHIVE UTILITY
@@ -1659,7 +1660,7 @@ export default function AdminDashboardPage() {
       setDiagnosticResults({
         database: {
           status: 'Healthy (100% Synchronized)',
-          latency: `${Math.floor(6 + Math.random() * 10)}ms`,
+          latency: '11ms',
           details: 'Supabase PostgreSQL & Persistent Local Store connected & responsive'
         },
         apiEndpoints: {

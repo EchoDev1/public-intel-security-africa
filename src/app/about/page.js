@@ -70,7 +70,10 @@ const DEFAULT_EDITORIAL_TEAM = [
 ];
 
 export default async function AboutPage() {
-  const editorialTeam = await getContent('editorial_team', DEFAULT_EDITORIAL_TEAM);
+  let editorialTeam = DEFAULT_EDITORIAL_TEAM;
+  try {
+    editorialTeam = await getContent('editorial_team', DEFAULT_EDITORIAL_TEAM);
+  } catch (_) {}
   const teamList = Array.isArray(editorialTeam) && editorialTeam.length > 0 ? editorialTeam : DEFAULT_EDITORIAL_TEAM;
 
   return (
@@ -180,7 +183,7 @@ export default async function AboutPage() {
                 <div className="flex items-start gap-4">
                   <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-slate-200 shrink-0 border border-slate-300">
                     {member.avatar ? (
-                      <Image src={member.avatar} alt={member.name} fill className="object-cover" sizes="64px" />
+                      <Image src={member.avatar} alt={member.name || 'Editorial Member'} fill className="object-cover" sizes="64px" unoptimized />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center font-bold text-amber-700 bg-amber-100 text-xl">
                         {member.name?.charAt(0) || 'F'}

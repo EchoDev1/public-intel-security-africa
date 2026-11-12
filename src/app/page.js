@@ -15,6 +15,7 @@ import TrainingAcademySection from '@/components/TrainingAcademySection';
 import EconomicSecuritySection from '@/components/EconomicSecuritySection';
 import NewsletterSection from '@/components/NewsletterSection';
 import { getLiveArticlesCollection } from '@/lib/articles/manager';
+import { ARTICLES } from '@/lib/data/articles';
 import JsonLd from '@/components/seo/JsonLd';
 import { SITE_CONFIG } from '@/lib/config/site';
 
@@ -22,8 +23,14 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function HomePage() {
-  const articles = await getLiveArticlesCollection();
-  const realArticles = articles.filter(a => a.isRealUpload);
+  let articles = ARTICLES;
+  try {
+    const live = await getLiveArticlesCollection();
+    if (Array.isArray(live)) {
+      articles = live;
+    }
+  } catch (_) {}
+  const realArticles = articles.filter(a => a && a.isRealUpload);
 
   // Special Reports / Featured investigations grid:
   // Real articles get priority so they appear prominently right beneath Hero

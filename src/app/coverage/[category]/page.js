@@ -77,8 +77,12 @@ export default async function CategoryDetailPage({ params }) {
     notFound();
   }
 
-  const allArticles = await getLiveArticlesCollection();
-  let categoryArticles = allArticles.filter(art => art.categorySlug === categorySlug);
+  let allArticles = ARTICLES;
+  try {
+    const live = await getLiveArticlesCollection();
+    if (Array.isArray(live)) allArticles = live;
+  } catch (_) {}
+  let categoryArticles = allArticles.filter(art => art && art.categorySlug === categorySlug);
   if (categoryArticles.length === 0) {
     categoryArticles = allArticles.slice(0, 3).map((art, idx) => ({
       ...art,

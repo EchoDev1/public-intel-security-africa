@@ -23,7 +23,10 @@ export const metadata = {
 };
 
 export default async function WomenInSecurityPage() {
-  const dynamicProfiles = await getContent('women_in_security', WOMEN_IN_SECURITY);
+  let dynamicProfiles = WOMEN_IN_SECURITY;
+  try {
+    dynamicProfiles = await getContent('women_in_security', WOMEN_IN_SECURITY);
+  } catch (_) {}
   const profiles = Array.isArray(dynamicProfiles) && dynamicProfiles.length > 0 ? dynamicProfiles : WOMEN_IN_SECURITY;
 
   return (
