@@ -63,7 +63,34 @@ function ensureStorage() {
 export async function getThreatMatrixData() {
   ensureStorage();
 
-  // 1. Try local persisted file
+  // 1. Try Supabase cloud persistence first (using categories table for reliable persistence)
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createServerSupabaseClient();
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('slug', '__threat_matrix__')
+        .maybeSingle();
+
+      if (!error && data && data.description) {
+        try {
+          const parsed = JSON.parse(data.description);
+          if (parsed && Array.isArray(parsed.sectors) && parsed.sectors.length > 0) {
+            // Sync to local cache file for fast subsequent reads
+            try {
+              if (fs && THREAT_MATRIX_FILE) {
+                fs.writeFileSync(THREAT_MATRIX_FILE, JSON.stringify(parsed, null, 2));
+              }
+            } catch (_) {}
+            return parsed;
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  // 2. Try local persisted file
   let localData = null;
   try {
     if (fs && fs.existsSync(THREAT_MATRIX_FILE)) {
@@ -71,30 +98,11 @@ export async function getThreatMatrixData() {
     }
   } catch (_) {}
 
-  // 2. Try Supabase fallback / merge if configured
-  if (isSupabaseConfigured()) {
-    try {
-      const supabase = createServerSupabaseClient();
-      const { data, error } = await supabase.from('threat_matrix').select('*').limit(1).single();
-      if (!error && data && data.sectors) {
-        return {
-          sectors: data.sectors,
-          continentalThreatLevel: data.continental_threat_level || 'Elevated',
-          breakingAlerts: data.breaking_alerts || BREAKING_ALERTS,
-          isAutoSyncEnabled: data.is_auto_sync_enabled !== false,
-          lastSyncSource: data.last_sync_source || 'UN Peacekeeping Operations & PISA Bureau',
-          lastSyncTimestamp: data.last_sync_timestamp || new Date().toISOString(),
-          liveIncidents: data.live_incidents || []
-        };
-      }
-    } catch (_) {}
-  }
-
   if (localData && Array.isArray(localData.sectors) && localData.sectors.length > 0) {
     return localData;
   }
 
-  // Baseline Fallback
+  // 3. Baseline Fallback
   return {
     sectors: CONTINENTAL_THREAT_INDEX.map(sec => ({
       ...sec,
@@ -116,8 +124,15 @@ export async function getThreatMatrixData() {
  */
 export async function saveThreatMatrixData(newData) {
   ensureStorage();
+  const current = await getThreatMatrixData();
   const state = {
-    ...newData,
+    sectors: newData.sectors || current.sectors || CONTINENTAL_THREAT_INDEX,
+    continentalThreatLevel: newData.continentalThreatLevel || current.continentalThreatLevel || 'Elevated',
+    breakingAlerts: newData.breakingAlerts || current.breakingAlerts || BREAKING_ALERTS,
+    isAutoSyncEnabled: typeof newData.isAutoSyncEnabled === 'boolean' ? newData.isAutoSyncEnabled : (current.isAutoSyncEnabled !== false),
+    lastSyncSource: newData.lastSyncSource || current.lastSyncSource || 'Admin Editorial Override',
+    lastSyncTimestamp: newData.lastSyncTimestamp || new Date().toISOString(),
+    liveIncidents: Array.isArray(newData.liveIncidents) ? newData.liveIncidents : (current.liveIncidents || []),
     lastSavedAt: new Date().toISOString()
   };
 
@@ -128,21 +143,19 @@ export async function saveThreatMatrixData(newData) {
     }
   } catch (_) {}
 
-  // 2. Persist to Supabase if configured
+  // 2. Persist to Supabase cloud categories table
   if (isSupabaseConfigured()) {
     try {
       const supabase = createServerSupabaseClient();
-      await supabase.from('threat_matrix').upsert({
-        id: 1,
-        sectors: state.sectors,
-        continental_threat_level: state.continentalThreatLevel,
-        breaking_alerts: state.breakingAlerts,
-        is_auto_sync_enabled: state.isAutoSyncEnabled,
-        last_sync_source: state.lastSyncSource,
-        last_sync_timestamp: state.lastSyncTimestamp,
-        live_incidents: state.liveIncidents
-      }, { onConflict: 'id' });
-    } catch (_) {}
+      await supabase.from('categories').upsert({
+        slug: '__threat_matrix__',
+        name: 'Continental Security Threat Matrix',
+        pillar: 'System',
+        description: JSON.stringify(state)
+      }, { onConflict: 'slug' });
+    } catch (err) {
+      console.error('Threat matrix Supabase persistence note:', err.message);
+    }
   }
 
   return state;

@@ -14,24 +14,78 @@ export default function ThreatMatrixPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const fetchMatrix = async () => {
-    try {
-      const res = await fetch('/api/threat-matrix');
-      const data = await res.json();
-      if (data.success && Array.isArray(data.sectors) && data.sectors.length > 0) {
-        setSectors(data.sectors);
-        if (data.continentalThreatLevel) setContinentalLevel(data.continentalThreatLevel);
-        if (data.lastSyncSource) setSyncSource(data.lastSyncSource);
-        if (data.lastSyncTimestamp) setLastSyncTimestamp(data.lastSyncTimestamp);
-        if (Array.isArray(data.liveIncidents)) setLiveIncidents(data.liveIncidents);
-      }
-    } catch (_) {} finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
+    let isMounted = true;
+
+    // Check localStorage cache first for immediate hydration
+    try {
+      const cached = localStorage.getItem('pisa_threat_matrix');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed?.sectors?.length > 0) {
+          setSectors(parsed.sectors);
+          if (parsed.continentalThreatLevel) setContinentalLevel(parsed.continentalThreatLevel);
+        }
+      }
+    } catch (_) {}
+
+    const fetchMatrix = async () => {
+      try {
+        const res = await fetch(`/api/threat-matrix?t=${Date.now()}`, { cache: 'no-store' });
+        const data = await res.json();
+        if (isMounted && data.success && Array.isArray(data.sectors) && data.sectors.length > 0) {
+          setSectors(data.sectors);
+          if (data.continentalThreatLevel) setContinentalLevel(data.continentalThreatLevel);
+          if (data.lastSyncSource) setSyncSource(data.lastSyncSource);
+          if (data.lastSyncTimestamp) setLastSyncTimestamp(data.lastSyncTimestamp);
+          if (Array.isArray(data.liveIncidents)) setLiveIncidents(data.liveIncidents);
+          try {
+            localStorage.setItem('pisa_threat_matrix', JSON.stringify({
+              sectors: data.sectors,
+              continentalThreatLevel: data.continentalThreatLevel
+            }));
+          } catch (_) {}
+        }
+      } catch (_) {} finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
     fetchMatrix();
+
+    // Listen for live instant client-side updates (0ms latency across tabs & admin)
+    const handleUpdate = (e) => {
+      if (!isMounted) return;
+      if (e?.detail?.sectors && Array.isArray(e.detail.sectors) && e.detail.sectors.length > 0) {
+        setSectors(e.detail.sectors);
+      }
+      if (e?.detail?.continentalThreatLevel) {
+        setContinentalLevel(e.detail.continentalThreatLevel);
+      }
+    };
+    window.addEventListener('pisa_threat_matrix_updated', handleUpdate);
+
+    let bc = null;
+    try {
+      if (typeof window !== 'undefined' && window.BroadcastChannel) {
+        bc = new BroadcastChannel('pisa_threat_matrix_channel');
+        bc.onmessage = (msg) => {
+          if (!isMounted) return;
+          if (msg?.data?.sectors && Array.isArray(msg.data.sectors) && msg.data.sectors.length > 0) {
+            setSectors(msg.data.sectors);
+          }
+          if (msg?.data?.continentalThreatLevel) {
+            setContinentalLevel(msg.data.continentalThreatLevel);
+          }
+        };
+      }
+    } catch (_) {}
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('pisa_threat_matrix_updated', handleUpdate);
+      if (bc) bc.close();
+    };
   }, []);
 
   const handleManualSync = async () => {
@@ -44,11 +98,30 @@ export default function ThreatMatrixPage() {
       });
       const data = await res.json();
       if (data.success && data.data) {
-        setSectors(data.data.sectors || []);
-        if (data.data.continentalThreatLevel) setContinentalLevel(data.data.continentalThreatLevel);
+        const liveSectors = data.data.sectors || [];
+        const liveLevel = data.data.continentalThreatLevel || continentalLevel;
+        setSectors(liveSectors);
+        if (data.data.continentalThreatLevel) setContinentalLevel(liveLevel);
         if (data.data.lastSyncSource) setSyncSource(data.data.lastSyncSource);
         if (data.data.lastSyncTimestamp) setLastSyncTimestamp(data.data.lastSyncTimestamp);
         if (Array.isArray(data.data.liveIncidents)) setLiveIncidents(data.data.liveIncidents);
+
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('pisa_threat_matrix', JSON.stringify({
+              sectors: liveSectors,
+              continentalThreatLevel: liveLevel
+            }));
+            window.dispatchEvent(new CustomEvent('pisa_threat_matrix_updated', {
+              detail: { sectors: liveSectors, continentalThreatLevel: liveLevel }
+            }));
+            if (window.BroadcastChannel) {
+              const bc = new BroadcastChannel('pisa_threat_matrix_channel');
+              bc.postMessage({ sectors: liveSectors, continentalThreatLevel: liveLevel });
+              bc.close();
+            }
+          } catch (_) {}
+        }
       }
     } catch (_) {} finally {
       setIsSyncing(false);

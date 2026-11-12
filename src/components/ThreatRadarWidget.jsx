@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ShieldAlert, AlertTriangle, ChevronRight, Activity, Globe2, Compass, Radio } from 'lucide-react';
+import { ChevronRight, Radio, Compass } from 'lucide-react';
 import { CONTINENTAL_THREAT_INDEX } from '@/lib/data/threatRadar';
 
 export default function ThreatRadarWidget() {
@@ -13,22 +13,67 @@ export default function ThreatRadarWidget() {
 
   useEffect(() => {
     let isMounted = true;
+
+    // Check localStorage cache first for immediate hydration
+    try {
+      const cached = localStorage.getItem('pisa_threat_matrix');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed?.sectors?.length > 0) {
+          setSectors(parsed.sectors);
+        }
+      }
+    } catch (_) {}
+
     async function loadLiveMatrix() {
       try {
-        const res = await fetch('/api/threat-matrix');
+        const res = await fetch(`/api/threat-matrix?t=${Date.now()}`, { cache: 'no-store' });
         const data = await res.json();
         if (isMounted && data.success && Array.isArray(data.sectors) && data.sectors.length > 0) {
           setSectors(data.sectors);
           if (data.lastSyncSource) setSyncSource(data.lastSyncSource);
           if (data.lastSyncTimestamp) setLastSyncTime(data.lastSyncTimestamp);
+          try {
+            localStorage.setItem('pisa_threat_matrix', JSON.stringify({
+              sectors: data.sectors,
+              continentalThreatLevel: data.continentalThreatLevel
+            }));
+          } catch (_) {}
         }
       } catch (_) {}
     }
     loadLiveMatrix();
-    return () => { isMounted = false; };
+
+    // Listen for live instant client-side updates (0ms latency across tabs & admin)
+    const handleUpdate = (e) => {
+      if (!isMounted) return;
+      if (e?.detail?.sectors && Array.isArray(e.detail.sectors) && e.detail.sectors.length > 0) {
+        setSectors(e.detail.sectors);
+      }
+    };
+    window.addEventListener('pisa_threat_matrix_updated', handleUpdate);
+
+    let bc = null;
+    try {
+      if (typeof window !== 'undefined' && window.BroadcastChannel) {
+        bc = new BroadcastChannel('pisa_threat_matrix_channel');
+        bc.onmessage = (msg) => {
+          if (!isMounted) return;
+          if (msg?.data?.sectors && Array.isArray(msg.data.sectors) && msg.data.sectors.length > 0) {
+            setSectors(msg.data.sectors);
+          }
+        };
+      }
+    } catch (_) {}
+
+    return () => { 
+      isMounted = false; 
+      window.removeEventListener('pisa_threat_matrix_updated', handleUpdate);
+      if (bc) bc.close();
+    };
   }, []);
 
-  const currentRegion = sectors[activeTab] || sectors[0];
+  const currentRegion = sectors[activeTab] || sectors[0] || {};
 
   return (
     <section className="py-6 sm:py-10 px-3 sm:px-4 max-w-7xl mx-auto bg-white dark:bg-slate-950 transition-colors">
@@ -90,7 +135,7 @@ export default function ThreatRadarWidget() {
                   {item.region}
                 </h4>
                 <div className="flex items-center gap-1.5 mt-2">
-                  <span className={`w-1.5 h-1.5 rounded-full ${item.statusColor}`}></span>
+                  <span className={`w-1.5 h-1.5 rounded-full ${item.statusColor || 'bg-amber-500'}`}></span>
                   <span className={`text-[10px] uppercase font-semibold ${badgeColor}`}>
                     {item.threatLevel}
                   </span>
@@ -101,7 +146,7 @@ export default function ThreatRadarWidget() {
         </div>
 
         {/* Active Region Assessment Briefing Box */}
-        {currentRegion && (
+        {currentRegion && currentRegion.region && (
           <div className="mt-6 p-5 md:p-6 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-xs grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
             
             <div className="lg:col-span-8 space-y-3">

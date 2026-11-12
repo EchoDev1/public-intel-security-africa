@@ -207,14 +207,20 @@ export default function AdminDashboardPage() {
 
   const fetchThreatMatrix = async () => {
     try {
-      const res = await fetch('/api/threat-matrix');
+      const res = await fetch(`/api/threat-matrix?t=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json();
-      if (data?.success && Array.isArray(data.sectors)) {
+      if (data?.success && Array.isArray(data.sectors) && data.sectors.length > 0) {
         setThreatRadarList(data.sectors);
         if (data.continentalThreatLevel) setContinentalThreatLevel(data.continentalThreatLevel);
         if (typeof data.isAutoSyncEnabled === 'boolean') setIsAutoSyncEnabled(data.isAutoSyncEnabled);
         if (data.lastSyncSource) setThreatMatrixSource(data.lastSyncSource);
         if (data.lastSyncTimestamp) setThreatMatrixLastSync(data.lastSyncTimestamp);
+        try {
+          localStorage.setItem('pisa_threat_matrix', JSON.stringify({
+            sectors: data.sectors,
+            continentalThreatLevel: data.continentalThreatLevel
+          }));
+        } catch (_) {}
       }
     } catch (_) {}
   };
@@ -229,10 +235,30 @@ export default function AdminDashboardPage() {
       });
       const data = await res.json();
       if (data?.success && data.data) {
-        setThreatRadarList(data.data.sectors || []);
-        if (data.data.continentalThreatLevel) setContinentalThreatLevel(data.data.continentalThreatLevel);
+        const liveSectors = data.data.sectors || [];
+        const liveLevel = data.data.continentalThreatLevel || continentalThreatLevel;
+        setThreatRadarList(liveSectors);
+        if (data.data.continentalThreatLevel) setContinentalThreatLevel(liveLevel);
         if (data.data.lastSyncSource) setThreatMatrixSource(data.data.lastSyncSource);
         if (data.data.lastSyncTimestamp) setThreatMatrixLastSync(data.data.lastSyncTimestamp);
+
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('pisa_threat_matrix', JSON.stringify({
+              sectors: liveSectors,
+              continentalThreatLevel: liveLevel
+            }));
+            window.dispatchEvent(new CustomEvent('pisa_threat_matrix_updated', {
+              detail: { sectors: liveSectors, continentalThreatLevel: liveLevel }
+            }));
+            if (window.BroadcastChannel) {
+              const bc = new BroadcastChannel('pisa_threat_matrix_channel');
+              bc.postMessage({ sectors: liveSectors, continentalThreatLevel: liveLevel });
+              bc.close();
+            }
+          } catch (_) {}
+        }
+
         showToast("Threat Matrix synchronized live from UN Peace & Security feeds!");
       }
     } catch (_) {
@@ -257,16 +283,44 @@ export default function AdminDashboardPage() {
 
   const handleSaveFullThreatMatrix = async (updatedSectors, updatedLevel) => {
     try {
-      await fetch('/api/threat-matrix', {
+      const payloadSectors = updatedSectors || threatRadarList;
+      const payloadLevel = updatedLevel || continentalThreatLevel;
+
+      // Broadcast and persist locally immediately for zero lag across tabs
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('pisa_threat_matrix', JSON.stringify({
+            sectors: payloadSectors,
+            continentalThreatLevel: payloadLevel
+          }));
+          window.dispatchEvent(new CustomEvent('pisa_threat_matrix_updated', {
+            detail: { sectors: payloadSectors, continentalThreatLevel: payloadLevel }
+          }));
+          if (window.BroadcastChannel) {
+            const bc = new BroadcastChannel('pisa_threat_matrix_channel');
+            bc.postMessage({ sectors: payloadSectors, continentalThreatLevel: payloadLevel });
+            bc.close();
+          }
+        } catch (_) {}
+      }
+
+      const res = await fetch('/api/threat-matrix', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'save_all',
-          sectors: updatedSectors || threatRadarList,
-          continentalThreatLevel: updatedLevel || continentalThreatLevel,
+          sectors: payloadSectors,
+          continentalThreatLevel: payloadLevel,
           isAutoSyncEnabled
         })
       });
+      const resData = await res.json();
+      if (resData?.data?.sectors) {
+        setThreatRadarList(resData.data.sectors);
+        if (resData.data.continentalThreatLevel) {
+          setContinentalThreatLevel(resData.data.continentalThreatLevel);
+        }
+      }
     } catch (_) {}
   };
 
@@ -7542,26 +7596,50 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (editingThreat) {
+                  const level = editingThreat.threatLevel || 'Elevated';
+                  const statusColor = level === 'Critical' ? 'bg-red-500' : level === 'Elevated' ? 'bg-orange-500' : level === 'Guarded' ? 'bg-yellow-500' : 'bg-emerald-500';
+                  const borderColor = level === 'Critical' ? 'border-red-500' : level === 'Elevated' ? 'border-orange-500' : level === 'Guarded' ? 'border-yellow-500' : 'border-emerald-500';
+
                   const updated = threatRadarList.map((t, i) => i === editingThreat.idx ? {
                     ...editingThreat,
+                    threatScore: Number(editingThreat.threatScore) || 6.0,
+                    statusColor,
+                    borderColor,
                     manualLock: true,
                     lastUpdated: 'Updated just now (Manual Override)'
                   } : t);
                   setThreatRadarList(updated);
-                  handleSaveFullThreatMatrix(updated);
+                  await handleSaveFullThreatMatrix(updated);
                   showToast(`Threat sector "${editingThreat.region}" updated and saved live.`);
                   setEditingThreat(null);
                 } else {
+                  const level = newThreatItem.threatLevel || 'Elevated';
+                  const statusColor = level === 'Critical' ? 'bg-red-500' : level === 'Elevated' ? 'bg-orange-500' : level === 'Guarded' ? 'bg-yellow-500' : 'bg-emerald-500';
+                  const borderColor = level === 'Critical' ? 'border-red-500' : level === 'Elevated' ? 'border-orange-500' : level === 'Guarded' ? 'border-yellow-500' : 'border-emerald-500';
+
                   const newT = {
                     ...newThreatItem,
+                    threatScore: Number(newThreatItem.threatScore) || 6.0,
+                    statusColor,
+                    borderColor,
                     manualLock: true,
+                    liveIncidentCount: 0,
                     lastUpdated: 'Updated just now (Manual Override)'
                   };
                   const updated = [...threatRadarList, newT];
                   setThreatRadarList(updated);
-                  handleSaveFullThreatMatrix(updated);
+                  await handleSaveFullThreatMatrix(updated);
                   showToast(`Threat sector "${newT.region}" added & saved to Continental Matrix.`);
                   setNewThreatModal(false);
+                  setNewThreatItem({
+                    region: '',
+                    threatLevel: 'Elevated',
+                    threatScore: 6.5,
+                    primaryVector: '',
+                    trend: 'Volatile',
+                    countriesAffected: '',
+                    details: ''
+                  });
                 }
               }}
               className="space-y-3 text-xs"

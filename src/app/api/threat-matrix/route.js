@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { 
   getThreatMatrixData, 
   saveThreatMatrixData, 
@@ -6,6 +7,24 @@ import {
 } from '@/lib/threatMatrix/manager';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+const NO_CACHE_HEADERS = {
+  'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+  'CDN-Cache-Control': 'no-store',
+  'Vercel-CDN-Cache-Control': 'no-store',
+  'Pragma': 'no-cache',
+  'Expires': '0'
+};
+
+function triggerRevalidation() {
+  try {
+    revalidatePath('/', 'layout');
+    revalidatePath('/');
+    revalidatePath('/threat-matrix');
+    revalidatePath('/admin');
+  } catch (_) {}
+}
 
 export async function GET(request) {
   try {
@@ -24,12 +43,17 @@ export async function GET(request) {
     return NextResponse.json({
       success: true,
       ...data
+    }, {
+      headers: NO_CACHE_HEADERS
     });
   } catch (err) {
     return NextResponse.json({
       success: false,
       error: err.message
-    }, { status: 500 });
+    }, { 
+      status: 500,
+      headers: NO_CACHE_HEADERS
+    });
   }
 }
 
@@ -41,10 +65,13 @@ export async function POST(request) {
     // 1. Instant Automated Synchronization from Live Sources
     if (action === 'sync_now') {
       const updated = await syncThreatMatrixWithLiveSources();
+      triggerRevalidation();
       return NextResponse.json({
         success: true,
         message: 'Threat Matrix updated from live UN Peace & Security and Global Conflict feeds.',
         data: updated
+      }, {
+        headers: NO_CACHE_HEADERS
       });
     }
 
@@ -61,10 +88,13 @@ export async function POST(request) {
         lastSyncSource: 'Lady Dakore Ekpendu (Executive Directive)',
         lastSyncTimestamp: new Date().toISOString()
       });
+      triggerRevalidation();
       return NextResponse.json({
         success: true,
         message: 'Threat Matrix configuration saved successfully.',
         data: updated
+      }, {
+        headers: NO_CACHE_HEADERS
       });
     }
 
@@ -85,13 +115,19 @@ export async function POST(request) {
           sectors: updatedSectors,
           lastSyncSource: 'Admin Editorial Override'
         });
+        triggerRevalidation();
         return NextResponse.json({
           success: true,
           message: `Sector "${sector.region}" updated and locked.`,
           data: updated
+        }, {
+          headers: NO_CACHE_HEADERS
         });
       }
-      return NextResponse.json({ success: false, error: 'Invalid sector index' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Invalid sector index' }, { 
+        status: 400,
+        headers: NO_CACHE_HEADERS
+      });
     }
 
     // 4. Toggle automated sync
@@ -102,18 +138,27 @@ export async function POST(request) {
         ...current,
         isAutoSyncEnabled: !!isAutoSyncEnabled
       });
+      triggerRevalidation();
       return NextResponse.json({
         success: true,
         message: `Automated live feed synchronization set to ${isAutoSyncEnabled ? 'ENABLED' : 'PAUSED'}.`,
         data: updated
+      }, {
+        headers: NO_CACHE_HEADERS
       });
     }
 
-    return NextResponse.json({ success: false, error: 'Unknown action' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Unknown action' }, { 
+      status: 400,
+      headers: NO_CACHE_HEADERS
+    });
   } catch (err) {
     return NextResponse.json({
       success: false,
       error: err.message
-    }, { status: 500 });
+    }, { 
+      status: 500,
+      headers: NO_CACHE_HEADERS
+    });
   }
 }
