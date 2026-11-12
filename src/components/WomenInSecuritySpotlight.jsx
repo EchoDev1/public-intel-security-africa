@@ -1,12 +1,31 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Sparkles, Quote, ArrowRight, Shield } from 'lucide-react';
 import { WOMEN_IN_SECURITY } from '@/lib/data/womenInSecurity';
 
 export default function WomenInSecuritySpotlight() {
-  const spotlightLeaders = WOMEN_IN_SECURITY.slice(0, 3);
+  const [leaders, setLeaders] = useState(WOMEN_IN_SECURITY);
+
+  const fetchProfiles = async () => {
+    try {
+      const res = await fetch('/api/women-in-security');
+      const data = await res.json();
+      if (data?.success && Array.isArray(data.profiles) && data.profiles.length > 0) {
+        setLeaders(data.profiles);
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    fetchProfiles();
+    const handleUpdate = () => fetchProfiles();
+    window.addEventListener('pisa_women_in_security_updated', handleUpdate);
+    return () => window.removeEventListener('pisa_women_in_security_updated', handleUpdate);
+  }, []);
+
+  const spotlightLeaders = leaders.slice(0, 3);
 
   return (
     <section className="py-10 sm:py-14 px-3 sm:px-4 max-w-7xl mx-auto bg-white dark:bg-slate-950 transition-colors">
@@ -38,9 +57,9 @@ export default function WomenInSecuritySpotlight() {
 
       {/* Grid of Leaders */}
       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-        {spotlightLeaders.map((leader) => (
+        {spotlightLeaders.map((leader, idx) => (
           <div
-            key={leader.id}
+            key={leader.id || idx}
             className="group rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-600 dark:hover:border-amber-500 p-5 sm:p-6 flex flex-col justify-between shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-1"
           >
             <div>
@@ -56,7 +75,7 @@ export default function WomenInSecuritySpotlight() {
                   <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors leading-snug font-serif">
                     {leader.name}
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{leader.organization}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{leader.organization || leader.titleAndRole}</p>
                 </div>
               </div>
 
@@ -64,7 +83,7 @@ export default function WomenInSecuritySpotlight() {
               <div className="relative p-4 rounded-xl bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 mb-4">
                 <Quote className="w-5 h-5 text-amber-600/30 dark:text-amber-400/20 absolute top-2 right-2" />
                 <p className="text-xs text-slate-800 dark:text-slate-200 italic leading-relaxed font-medium">
-                  &ldquo;{leader.featuredQuote}&rdquo;
+                  &ldquo;{leader.featuredQuote || leader.bio?.slice(0, 140) + '...'}&rdquo;
                 </p>
               </div>
 
@@ -77,7 +96,7 @@ export default function WomenInSecuritySpotlight() {
             {/* Bottom */}
             <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
               <span className="text-amber-800 dark:text-amber-400 font-mono text-[11px] font-bold truncate max-w-[170px]">
-                {leader.specialization}
+                {leader.specialization || leader.titleAndRole || 'Defense Strategist'}
               </span>
               <Link
                 href="/women-in-security"

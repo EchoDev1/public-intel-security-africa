@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Shield, 
@@ -19,7 +19,82 @@ import Logo from './Logo';
 import SocialIcon from './SocialIcon';
 import { INITIAL_SOCIAL_LINKS } from '@/lib/data/socials';
 
+const DEFAULT_FOOTER_SETTINGS = {
+  aboutText: 'Public Intel Security Africa is a leading multi-platform security media production of Plugins Media Limited, dedicated to reshaping public discourse on security through informed journalism, expert analysis, strategic dialogue, and solution-driven events.',
+  headOffice: 'Plot 428 Constitution Ave, Central Business District, Abuja / Lagos, Nigeria',
+  nairobiOffice: 'Riverside Square, Nairobi, Kenya',
+  copyright: 'Public Intel Security Africa. A Multi-Platform Media Production of Plugins Media Limited. All rights reserved.',
+  hotlineEmail: 'tips@publicintelsecurity.africa',
+  hotlinePhone: 'Signal / PGP: +234 800-PUBLIC-INTEL'
+};
+
+const DEFAULT_BUREAUS = [
+  { id: 'bur-01', region: 'West Africa', city: 'Abuja & Lagos Bureau', address: 'Plot 428 Constitution Ave, Central Business District, Abuja / Lagos, Nigeria' },
+  { id: 'bur-02', region: 'East & Horn', city: 'Nairobi Bureau', address: 'Riverside Square, Nairobi, Kenya' },
+  { id: 'bur-03', region: 'Southern Africa', city: 'Johannesburg Bureau', address: 'Sandton City Tower, Johannesburg, South Africa' },
+  { id: 'bur-04', region: 'North Africa', city: 'Cairo Bureau', address: 'New Cairo Tech District, Cairo, Egypt' }
+];
+
 export default function Footer() {
+  const [footerSettings, setFooterSettings] = useState(DEFAULT_FOOTER_SETTINGS);
+  const [bureauContacts, setBureauContacts] = useState(DEFAULT_BUREAUS);
+  const [socialLinks, setSocialLinks] = useState(INITIAL_SOCIAL_LINKS);
+
+  const fetchFooterData = async () => {
+    try {
+      const [platformRes, partnerRes] = await Promise.all([
+        fetch('/api/platform-config').catch(() => null),
+        fetch('/api/partnerships').catch(() => null)
+      ]);
+
+      if (platformRes && platformRes.ok) {
+        const pData = await platformRes.json();
+        if (pData?.success) {
+          if (pData.footerSettings) setFooterSettings(prev => ({ ...prev, ...pData.footerSettings }));
+          if (Array.isArray(pData.socialLinks) && pData.socialLinks.length > 0) {
+            setSocialLinks(pData.socialLinks.filter(s => s.status !== 'Inactive'));
+          }
+        }
+      }
+
+      if (partnerRes && partnerRes.ok) {
+        const partData = await partnerRes.json();
+        if (partData?.success && Array.isArray(partData.bureaus) && partData.bureaus.length > 0) {
+          setBureauContacts(partData.bureaus);
+        }
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    fetchFooterData();
+
+    const handleFooterUpdate = (e) => {
+      if (e?.detail) setFooterSettings(prev => ({ ...prev, ...e.detail }));
+      else fetchFooterData();
+    };
+
+    const handleBureauUpdate = (e) => {
+      if (e?.detail?.bureaus && Array.isArray(e.detail.bureaus)) setBureauContacts(e.detail.bureaus);
+      else fetchFooterData();
+    };
+
+    const handleSocialsUpdate = (e) => {
+      if (e?.detail && Array.isArray(e.detail)) setSocialLinks(e.detail.filter(s => s.status !== 'Inactive'));
+      else fetchFooterData();
+    };
+
+    window.addEventListener('pisa_footer_updated', handleFooterUpdate);
+    window.addEventListener('pisa_bureau_contacts_updated', handleBureauUpdate);
+    window.addEventListener('pisa_social_links_updated', handleSocialsUpdate);
+
+    return () => {
+      window.removeEventListener('pisa_footer_updated', handleFooterUpdate);
+      window.removeEventListener('pisa_bureau_contacts_updated', handleBureauUpdate);
+      window.removeEventListener('pisa_social_links_updated', handleSocialsUpdate);
+    };
+  }, []);
+
   return (
     <footer className="bg-slate-900 text-slate-300 text-xs border-t border-slate-800 pt-16 pb-28 md:pb-20">
       <div className="max-w-7xl mx-auto px-4 space-y-12">
@@ -32,7 +107,7 @@ export default function Footer() {
             <Logo variant="dark" size="default" />
 
             <p className="text-xs text-slate-400 leading-relaxed max-w-md">
-              Public Intel Security Africa is a leading multi-platform security media production of <strong>Plugins Media Limited</strong>, dedicated to reshaping public discourse on security through informed journalism, expert analysis, strategic dialogue, and solution-driven events.
+              {footerSettings.aboutText}
             </p>
 
             <div className="pt-2 flex flex-wrap items-center gap-3 text-[11px] text-slate-300 font-semibold">
@@ -61,22 +136,14 @@ export default function Footer() {
               Continental Bureau Network
             </h4>
             <div className="space-y-2 text-xs text-slate-300">
-              <div className="flex items-start gap-2">
-                <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
-                <span><strong>West Africa Bureau:</strong> Plot 428 Constitution Ave, Central Business District, Abuja / Lagos, Nigeria</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
-                <span><strong>East & Horn Bureau:</strong> Riverside Square, Nairobi, Kenya</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
-                <span><strong>Southern Africa Bureau:</strong> Sandton City Tower, Johannesburg, South Africa</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
-                <span><strong>North Africa Bureau:</strong> New Cairo Tech District, Cairo, Egypt</span>
-              </div>
+              {bureauContacts.slice(0, 5).map((b) => (
+                <div key={b.id || b.city} className="flex items-start gap-2">
+                  <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>{b.region || b.city}:</strong> {b.address || `${b.city}, ${b.country}`}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -90,8 +157,8 @@ export default function Footer() {
               For high-risk confidential disclosures, investigative tips, and verified leaks:
             </p>
             <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-1 font-mono text-[11px]">
-              <div className="text-amber-400 font-bold">tips@publicintelsecurity.africa</div>
-              <div className="text-slate-300">Signal / PGP: +234 800-PUBLIC-INTEL</div>
+              <div className="text-amber-400 font-bold">{footerSettings.hotlineEmail || 'tips@publicintelsecurity.africa'}</div>
+              <div className="text-slate-300">{footerSettings.hotlinePhone || 'Signal / PGP: +234 800-PUBLIC-INTEL'}</div>
             </div>
             <Link
               href="/eyewitness-reports"
@@ -110,7 +177,7 @@ export default function Footer() {
             <div className="flex items-center justify-center lg:justify-start gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block"></span>
               <h4 className="text-xs font-bold uppercase tracking-widest text-white">
-                Official Intelligence Channels & Social Media
+                Official Intelligence Channels & Social Media ({socialLinks.length})
               </h4>
             </div>
             <p className="text-[11px] text-slate-400">
@@ -119,13 +186,13 @@ export default function Footer() {
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
-            {INITIAL_SOCIAL_LINKS.map((soc) => (
+            {socialLinks.map((soc) => (
               <Link
                 key={soc.id}
                 href={soc.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                title={`${soc.platform} (${soc.handle}) - ${soc.category}`}
+                title={`${soc.platform} (${soc.handle}) - ${soc.category || 'Strategic Community'}`}
                 className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-amber-400 border border-slate-800 hover:border-amber-500/40 transition-all text-xs font-semibold group shadow-2xs hover:scale-105"
               >
                 <span className="text-amber-400 group-hover:text-amber-300 transition-colors">
@@ -140,7 +207,7 @@ export default function Footer() {
         {/* Bottom Legal */}
         <div className="pt-8 border-t border-slate-800/80 flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
           <div>
-            &copy; {new Date().getFullYear()} <strong>Public Intel Security Africa</strong>. A Multi-Platform Media Production of <strong>Plugins Media Limited</strong>. All rights reserved.
+            &copy; {new Date().getFullYear()} <strong>{footerSettings.copyright}</strong>
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-slate-400 font-medium">

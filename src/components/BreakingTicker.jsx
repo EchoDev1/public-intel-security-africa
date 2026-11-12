@@ -8,18 +8,62 @@ import { BREAKING_ALERTS } from '@/lib/data/threatRadar';
 export default function BreakingTicker() {
   const [alerts, setAlerts] = useState(BREAKING_ALERTS);
   const [currentAlertIndex, setCurrentAlertIndex] = useState(0);
+  const [enabled, setEnabled] = useState(true);
+
+  const fetchTickerData = async () => {
+    try {
+      const [threatRes, headerRes] = await Promise.all([
+        fetch('/api/threat-matrix').catch(() => null),
+        fetch('/api/platform-config?section=header').catch(() => null)
+      ]);
+
+      let loadedAlerts = [...BREAKING_ALERTS];
+
+      if (threatRes && threatRes.ok) {
+        const d = await threatRes.json();
+        if (d?.success && Array.isArray(d.breakingAlerts) && d.breakingAlerts.length > 0) {
+          loadedAlerts = d.breakingAlerts;
+        }
+      }
+
+      if (headerRes && headerRes.ok) {
+        const h = await headerRes.json();
+        if (h?.success && h?.headerSettings) {
+          if (h.headerSettings.showBreakingTicker === false) {
+            setEnabled(false);
+          } else {
+            setEnabled(true);
+          }
+          if (h.headerSettings.breakingTickerText && h.headerSettings.breakingTickerText.trim()) {
+            loadedAlerts = [h.headerSettings.breakingTickerText.trim(), ...loadedAlerts.filter(a => a !== h.headerSettings.breakingTickerText.trim())];
+          }
+        }
+      }
+
+      setAlerts(loadedAlerts);
+    } catch (_) {}
+  };
 
   useEffect(() => {
-    let isMounted = true;
-    fetch('/api/threat-matrix')
-      .then(r => r.json())
-      .then(d => {
-        if (isMounted && d.success && Array.isArray(d.breakingAlerts) && d.breakingAlerts.length > 0) {
-          setAlerts(d.breakingAlerts);
+    fetchTickerData();
+
+    const handleHeaderUpdate = (e) => {
+      if (e?.detail) {
+        if (e.detail.showBreakingTicker === false) {
+          setEnabled(false);
+        } else {
+          setEnabled(true);
         }
-      })
-      .catch(() => {});
-    return () => { isMounted = false; };
+        if (e.detail.breakingTickerText && e.detail.breakingTickerText.trim()) {
+          setAlerts(prev => [e.detail.breakingTickerText.trim(), ...prev.filter(a => a !== e.detail.breakingTickerText.trim())]);
+        }
+      } else {
+        fetchTickerData();
+      }
+    };
+
+    window.addEventListener('pisa_header_updated', handleHeaderUpdate);
+    return () => window.removeEventListener('pisa_header_updated', handleHeaderUpdate);
   }, []);
 
   useEffect(() => {
@@ -29,6 +73,8 @@ export default function BreakingTicker() {
     }, 6000);
     return () => clearInterval(timer);
   }, [alerts.length]);
+
+  if (!enabled) return null;
 
   return (
     <div className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-xs py-1.5 md:py-2 px-3 sm:px-4 select-none relative overflow-hidden z-20 transition-colors">
@@ -78,7 +124,6 @@ export default function BreakingTicker() {
         >
           <span className="hidden sm:inline">Threat Matrix</span>
           <span className="sm:hidden">Matrix</span>
-          <ArrowRight className="w-3 h-3" />
         </Link>
       </div>
     </div>

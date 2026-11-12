@@ -1,13 +1,43 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Mail, ShieldCheck, CheckCircle2, Send, Lock } from 'lucide-react';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 
 export default function NewsletterSection() {
   const [email, setEmail] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [settings, setSettings] = useState({
+    headline: 'Essential Strategic Intelligence, Delivered Before the Markets Open',
+    subtitle: 'Join over 42,000 defense policymakers, intelligence officers, maritime operators, diplomats, and corporate risk leaders receiving our daily curated security assessments across Africa.',
+    ctaText: 'Subscribe to Wire'
+  });
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('/api/newsletter');
+      const data = await res.json();
+      if (data?.success && data?.settings) {
+        setSettings(prev => ({
+          ...prev,
+          ...data.settings
+        }));
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    fetchSettings();
+    const handleUpdate = (e) => {
+      if (e?.detail) {
+        setSettings(prev => ({ ...prev, ...e.detail }));
+      } else {
+        fetchSettings();
+      }
+    };
+    window.addEventListener('pisa_newsletter_settings_updated', handleUpdate);
+    return () => window.removeEventListener('pisa_newsletter_settings_updated', handleUpdate);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -15,17 +45,13 @@ export default function NewsletterSection() {
 
     setLoading(true);
     try {
-      if (isSupabaseConfigured()) {
-        await supabase.from('newsletter_subscribers').insert([
-          {
-            email: email,
-            subscriber_tier: 'Executive Daily Brief',
-            interests: ['National Security', 'Maritime', 'Cybersecurity', 'Geopolitics']
-          }
-        ]);
-      }
+      await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
     } catch (err) {
-      console.warn('Supabase newsletter fallback:', err);
+      console.warn('Newsletter submission fallback:', err);
     } finally {
       setLoading(false);
       setIsSubscribed(true);
@@ -49,11 +75,11 @@ export default function NewsletterSection() {
               </div>
 
               <h2 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white font-serif leading-tight">
-                Essential Strategic Intelligence, Delivered Before the Markets Open
+                {settings.headline}
               </h2>
 
               <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                Join over 42,000 defense policymakers, intelligence officers, maritime operators, diplomats, and corporate risk leaders receiving our daily curated security assessments across Africa.
+                {settings.subtitle}
               </p>
 
               <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-500 dark:text-slate-400 pt-1 font-medium">
@@ -99,7 +125,7 @@ export default function NewsletterSection() {
                     className="w-full py-3 px-5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition-all hover:scale-102"
                   >
                     <Send className="w-4 h-4" />
-                    <span>{loading ? 'Registering Dispatch...' : 'Subscribe to Strategic Briefing'}</span>
+                    <span>{loading ? 'Registering Dispatch...' : (settings.ctaText || 'Subscribe to Strategic Briefing')}</span>
                   </button>
                   <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center">
                     Protected by Plugins Media zero-compromise confidentiality protocols.

@@ -1,6 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
-import { Shield, Award, Globe, Radio, Tv } from 'lucide-react';
+import Image from 'next/image';
+import { Shield, Award, Globe, Radio, Tv, Users, CheckCircle } from 'lucide-react';
+import { getContent } from '@/lib/contentStore';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export const metadata = {
   title: 'Institutional Profile & Mandate | Plugins Media Limited',
@@ -17,7 +22,57 @@ export const metadata = {
   },
 };
 
-export default function AboutPage() {
+const DEFAULT_EDITORIAL_TEAM = [
+  {
+    id: 'team-01',
+    name: 'Lady Dakore Ekpendu',
+    role: 'Executive Director & Editor-in-Chief',
+    bureau: 'Abuja Headquarters (West Africa)',
+    clearance: 'Super Admin / Top Secret',
+    beats: 'Defense Policy, Intelligence Synthesis, High-Level Strategic Summits',
+    status: 'Active Command',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80',
+    email: 'Ekpendudakore@gmail.com'
+  },
+  {
+    id: 'team-02',
+    name: 'Capt. (Ret.) Tariq Adeleke',
+    role: 'Senior Naval & Littoral Security Analyst',
+    bureau: 'Lagos Maritime Operations Desk',
+    clearance: 'Level 4 Intelligence Clearance',
+    beats: 'Gulf of Guinea Maritime Defense, Autonomous Sensors, Anti-Piracy',
+    status: 'Active',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
+    email: 'tariq.adeleke@publicintelsecurity.africa'
+  },
+  {
+    id: 'team-03',
+    name: 'Dr. Raymond Adeyemi',
+    role: 'Head of Asymmetric Warfare & Sahel Desk',
+    bureau: 'Nairobi Bureau (East & Horn)',
+    clearance: 'Level 4 Intelligence Clearance',
+    beats: 'UAV Telemetry, Counter-Insurgency, Trans-Border Militias',
+    status: 'On Field Assignment',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80',
+    email: 'raymond.adeyemi@publicintelsecurity.africa'
+  },
+  {
+    id: 'team-04',
+    name: 'Farida Al-Mansoor',
+    role: 'North Africa & Mediterranean Security Fellow',
+    bureau: 'Cairo Strategic Hub',
+    clearance: 'Level 3 Analyst Clearance',
+    beats: 'Critical Infrastructure, Cyber Threats, Geopolitics',
+    status: 'Active',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
+    email: 'farida.mansoor@publicintelsecurity.africa'
+  }
+];
+
+export default async function AboutPage() {
+  const editorialTeam = await getContent('editorial_team', DEFAULT_EDITORIAL_TEAM);
+  const teamList = Array.isArray(editorialTeam) && editorialTeam.length > 0 ? editorialTeam : DEFAULT_EDITORIAL_TEAM;
+
   return (
     <div className="py-12 px-4 max-w-5xl mx-auto space-y-12 bg-white">
       
@@ -102,6 +157,65 @@ export default function AboutPage() {
         </div>
 
       </div>
+
+      {/* Editorial Board & Fellows */}
+      <section className="space-y-6">
+        <div className="text-center max-w-2xl mx-auto space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold uppercase tracking-wider">
+            <Users className="w-3.5 h-3.5 text-amber-700" />
+            <span>Newsroom Leadership</span>
+          </div>
+          <h2 className="text-2xl md:text-3xl font-black text-slate-900 font-serif">
+            Editorial Board & Strategic Fellows
+          </h2>
+          <p className="text-xs text-slate-500">
+            Frontline defense correspondents, naval analysts, and investigative researchers guiding Public Intel Security Africa.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {teamList.map((member) => (
+            <div key={member.id} className="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 shadow-sm flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-start gap-4">
+                  <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-slate-200 shrink-0 border border-slate-300">
+                    {member.avatar ? (
+                      <Image src={member.avatar} alt={member.name} fill className="object-cover" sizes="64px" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center font-bold text-amber-700 bg-amber-100 text-xl">
+                        {member.name?.charAt(0) || 'F'}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 font-serif">{member.name}</h3>
+                    <div className="text-xs text-amber-800 font-semibold">{member.role}</div>
+                    <div className="text-[11px] text-slate-500">{member.bureau}</div>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-white border border-slate-200 text-xs space-y-1">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Clearance / Credential:</span>
+                    <span className="font-mono text-slate-800 font-medium">{member.clearance}</span>
+                  </div>
+                  <div className="pt-1">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Focus Areas & Beats:</span>
+                    <span className="text-slate-700 leading-snug">{member.beats}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
+                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                  {member.status || 'Active Command'}
+                </span>
+                <span className="font-mono text-slate-400 text-[11px]">{member.email}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* CTA to Partnerships */}
       <div className="p-8 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-4">

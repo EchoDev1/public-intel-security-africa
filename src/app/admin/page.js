@@ -488,6 +488,139 @@ export default function AdminDashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ profiles: updatedWomen })
       });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pisa_women_in_security_updated'));
+      }
+    } catch (_) {}
+  };
+
+  const fetchPlatformConfig = async () => {
+    try {
+      const res = await fetch('/api/platform-config');
+      const data = await res.json();
+      if (data?.success) {
+        if (data.headerSettings) setHeaderSettings(data.headerSettings);
+        if (data.footerSettings) setFooterSettings(data.footerSettings);
+        if (Array.isArray(data.socialLinks) && data.socialLinks.length > 0) setSocialLinks(data.socialLinks);
+        if (Array.isArray(data.specializedDivisions) && data.specializedDivisions.length > 0) setSpecializedDivisions(data.specializedDivisions);
+        if (Array.isArray(data.editorialTeam) && data.editorialTeam.length > 0) setEditorialTeam(data.editorialTeam);
+      }
+    } catch (_) {}
+  };
+
+  const fetchNewsletter = async () => {
+    try {
+      const res = await fetch('/api/newsletter');
+      const data = await res.json();
+      if (data?.success) {
+        if (data.settings) setNewsletterSettings(data.settings);
+        if (Array.isArray(data.subscribers) && data.subscribers.length > 0) setSubscribers(data.subscribers);
+      }
+    } catch (_) {}
+  };
+
+  const handleSaveHeader = async (settings) => {
+    try {
+      const payload = settings || headerSettings;
+      await fetch('/api/platform-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_header', data: payload })
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pisa_header_updated', { detail: payload }));
+      }
+      showToast('Header & Breaking Ticker saved successfully!');
+    } catch (_) {
+      showToast('Error saving header settings.');
+    }
+  };
+
+  const handleSaveFooter = async (settings) => {
+    try {
+      const payload = settings || footerSettings;
+      await fetch('/api/platform-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_footer', data: payload })
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pisa_footer_updated', { detail: payload }));
+      }
+      showToast('Footer details and bureau directory updated live!');
+    } catch (_) {
+      showToast('Error saving footer settings.');
+    }
+  };
+
+  const handleSaveNewsletter = async (settings) => {
+    try {
+      const payload = settings || newsletterSettings;
+      await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_settings', settings: payload })
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pisa_newsletter_settings_updated', { detail: payload }));
+      }
+      showToast('Newsletter settings updated and synced live!');
+    } catch (_) {
+      showToast('Error saving newsletter settings.');
+    }
+  };
+
+  const handleDeleteSubscriber = async (id, email) => {
+    try {
+      setSubscribers(prev => prev.filter(s => s.id !== id && s.email !== email));
+      await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_subscriber', id, email })
+      });
+      showToast('Subscriber removed successfully.');
+    } catch (_) {}
+  };
+
+  const handleSaveSocials = async (links) => {
+    try {
+      const payload = links || socialLinks;
+      await fetch('/api/platform-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_socials', data: payload })
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pisa_social_links_updated', { detail: payload }));
+      }
+    } catch (_) {}
+  };
+
+  const handleSaveDivisions = async (divisions) => {
+    try {
+      const payload = divisions || specializedDivisions;
+      await fetch('/api/platform-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_divisions', data: payload })
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pisa_divisions_updated', { detail: payload }));
+      }
+    } catch (_) {}
+  };
+
+  const handleSaveEditorialTeam = async (team) => {
+    try {
+      const payload = team || editorialTeam;
+      await fetch('/api/platform-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_editorial_team', data: payload })
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pisa_editorial_team_updated', { detail: payload }));
+      }
     } catch (_) {}
   };
 
@@ -499,6 +632,8 @@ export default function AdminDashboardPage() {
     fetchBroadcastMedia();
     fetchWebinars();
     fetchWomenInSecurity();
+    fetchPlatformConfig();
+    fetchNewsletter();
 
     const handleInquiries = () => fetchPartnerships();
     const handleTrainingUpdate = () => fetchTraining();
@@ -3126,7 +3261,7 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
               </p>
             </div>
 
-            <form onSubmit={(e) => { e.preventDefault(); showToast('Header settings saved successfully!'); }} className="space-y-4 text-xs">
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveHeader(headerSettings); }} className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="font-bold uppercase text-slate-700 dark:text-slate-300">Site Brand Title</label>
@@ -3219,7 +3354,7 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                 <p className="text-xs text-slate-500">Edit the 0600 Hours Intel Briefing call-to-action text and manage subscribers.</p>
               </div>
 
-              <form onSubmit={(e) => { e.preventDefault(); showToast('Newsletter settings updated.'); }} className="space-y-3 text-xs">
+              <form onSubmit={(e) => { e.preventDefault(); handleSaveNewsletter(newsletterSettings); }} className="space-y-3 text-xs">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="font-bold uppercase text-slate-700 dark:text-slate-300">Newsletter Headline</label>
@@ -3284,7 +3419,7 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                       <div className="text-[10px] text-slate-400">{s.tier} • Subscribed {s.subscribedAt}</div>
                     </div>
                     <button
-                      onClick={() => { setSubscribers(subscribers.filter(x => x.id !== s.id)); showToast('Subscriber removed.'); }}
+                      onClick={() => handleDeleteSubscriber(s.id, s.email)}
                       className="text-red-500 hover:text-red-700 text-xs font-bold"
                     >
                       Remove
@@ -3309,7 +3444,7 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
               <p className="text-xs text-slate-500">Edit the mission statement, continental bureau addresses, and legal copyright line.</p>
             </div>
 
-            <form onSubmit={(e) => { e.preventDefault(); showToast('Footer details updated successfully!'); }} className="space-y-4 text-xs">
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveFooter(footerSettings); }} className="space-y-4 text-xs">
               <div className="space-y-1">
                 <label className="font-bold uppercase text-slate-700 dark:text-slate-300">About Mission Statement</label>
                 <textarea
@@ -3423,8 +3558,11 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                   <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
                     <button
                       onClick={() => {
-                        setSocialLinks(socialLinks.map(s => s.id === soc.id ? { ...s, status: s.status === 'Active' ? 'Inactive' : 'Active' } : s));
-                        showToast(`Status for ${soc.platform} updated to ${soc.status === 'Active' ? 'Inactive' : 'Active'}`);
+                        const nextStatus = soc.status === 'Active' ? 'Inactive' : 'Active';
+                        const updated = socialLinks.map(s => s.id === soc.id ? { ...s, status: nextStatus } : s);
+                        setSocialLinks(updated);
+                        handleSaveSocials(updated);
+                        showToast(`Status for ${soc.platform} updated to ${nextStatus}`);
                       }}
                       className="text-slate-500 hover:text-slate-900 dark:hover:text-white font-medium"
                     >
@@ -3440,7 +3578,9 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                       </button>
                       <button
                         onClick={() => {
-                          setSocialLinks(socialLinks.filter(x => x.id !== soc.id));
+                          const updated = socialLinks.filter(x => x.id !== soc.id);
+                          setSocialLinks(updated);
+                          handleSaveSocials(updated);
                           showToast(`Channel "${soc.platform}" deleted successfully.`);
                         }}
                         className="text-red-500 hover:text-red-700 font-bold flex items-center gap-1"
@@ -4320,7 +4460,9 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                       </button>
                       <button
                         onClick={() => {
-                          setSpecializedDivisions(specializedDivisions.filter((_, i) => i !== idx));
+                          const updated = specializedDivisions.filter((_, i) => i !== idx);
+                          setSpecializedDivisions(updated);
+                          handleSaveDivisions(updated);
                           showToast(`Division "${div.name}" removed successfully.`);
                         }}
                         className="text-red-500 hover:text-red-700 font-bold flex items-center gap-1"
@@ -5232,7 +5374,9 @@ CREATE POLICY "Admin Write Threat Matrix" ON public.threat_matrix FOR ALL USING 
                       </button>
                       <button
                         onClick={() => {
-                          setEditorialTeam(editorialTeam.filter((_, i) => i !== idx));
+                          const updated = editorialTeam.filter((_, i) => i !== idx);
+                          setEditorialTeam(updated);
+                          handleSaveEditorialTeam(updated);
                           showToast(`Accreditation for "${member.name}" revoked.`);
                         }}
                         className="text-red-500 hover:text-red-700 flex items-center gap-1"
@@ -7291,7 +7435,9 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (editingSocial) {
-                  setSocialLinks(socialLinks.map(s => s.id === editingSocial.id ? { ...editingSocial } : s));
+                  const updated = socialLinks.map(s => s.id === editingSocial.id ? { ...editingSocial } : s);
+                  setSocialLinks(updated);
+                  handleSaveSocials(updated);
                   showToast(`Social channel "${editingSocial.platform}" updated!`);
                   setEditingSocial(null);
                 } else {
@@ -7304,7 +7450,9 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                     followers: newSocial.followers || '10K Followers',
                     status: newSocial.status || 'Active'
                   };
-                  setSocialLinks([...socialLinks, item]);
+                  const updated = [...socialLinks, item];
+                  setSocialLinks(updated);
+                  handleSaveSocials(updated);
                   showToast(`Social channel "${item.platform}" added to Footer & Channels!`);
                   setNewSocialModal(false);
                 }
@@ -7428,10 +7576,12 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (editingDivision) {
-                  setSpecializedDivisions(specializedDivisions.map(d => (d.id === editingDivision.id || d.slug === editingDivision.slug) ? {
+                  const updated = specializedDivisions.map(d => (d.id === editingDivision.id || d.slug === editingDivision.slug) ? {
                     ...editingDivision,
                     featuredImage: editDivisionPhotoPreview || editingDivision.featuredImage
-                  } : d));
+                  } : d);
+                  setSpecializedDivisions(updated);
+                  handleSaveDivisions(updated);
                   showToast(`Specialized division "${editingDivision.name}" updated!`);
                   setEditingDivision(null);
                 } else {
@@ -7446,7 +7596,9 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                     featuredImage: divisionPhotoPreview || newDivision.featuredImage || 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=800&q=80',
                     videoUrl: ''
                   };
-                  setSpecializedDivisions([...specializedDivisions, div]);
+                  const updated = [...specializedDivisions, div];
+                  setSpecializedDivisions(updated);
+                  handleSaveDivisions(updated);
                   showToast(`Specialized division "${div.name}" established!`);
                   setNewDivisionModal(false);
                 }
@@ -8284,10 +8436,12 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (editingTeamMember) {
-                  setEditorialTeam(editorialTeam.map(m => m.id === editingTeamMember.id ? {
+                  const updated = editorialTeam.map(m => m.id === editingTeamMember.id ? {
                     ...editingTeamMember,
                     avatar: editTeamPhotoPreview || editingTeamMember.avatar
-                  } : m));
+                  } : m);
+                  setEditorialTeam(updated);
+                  handleSaveEditorialTeam(updated);
                   showToast(`Fellow "${editingTeamMember.name}" credentials updated!`);
                   setEditingTeamMember(null);
                 } else {
@@ -8302,7 +8456,9 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                     avatar: teamPhotoPreview || newTeamMember.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
                     email: newTeamMember.email || 'fellow@publicintelsecurity.africa'
                   };
-                  setEditorialTeam([...editorialTeam, m]);
+                  const updated = [...editorialTeam, m];
+                  setEditorialTeam(updated);
+                  handleSaveEditorialTeam(updated);
                   showToast(`Fellow "${m.name}" accredited successfully!`);
                   setNewTeamModal(false);
                 }
