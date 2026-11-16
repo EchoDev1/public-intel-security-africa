@@ -130,17 +130,15 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <link rel="preload" as="image" href="/images/logo/logo-light.png" />
+        <link rel="preload" as="image" href="/images/logo/logo-dark.png" />
         <script
           id="theme-init"
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                const storedTheme = localStorage.getItem('pi-theme');
-                if (storedTheme === 'dark' || (!storedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                  document.documentElement.classList.add('dark');
-                } else {
-                  document.documentElement.classList.remove('dark');
-                }
+                localStorage.removeItem('pi-theme');
+                document.documentElement.classList.remove('dark');
               } catch (_) {}
             `,
           }}

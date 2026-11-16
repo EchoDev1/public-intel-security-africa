@@ -35,7 +35,8 @@ export default function Logo({
             alt="Public Intel Security Africa"
             className={`${logoHeights[size]} w-auto object-contain transition-transform duration-200 group-hover:scale-[1.01]`}
             loading="eager"
-            decoding="async"
+            fetchPriority="high"
+            decoding="sync"
           />
         ) : isExplicitLight ? (
           /* Permanently Light / White Surfaces */
@@ -44,24 +45,27 @@ export default function Logo({
             alt="Public Intel Security Africa"
             className={`${logoHeights[size]} w-auto object-contain transition-transform duration-200 group-hover:scale-[1.01]`}
             loading="eager"
-            decoding="async"
+            fetchPriority="high"
+            decoding="sync"
           />
         ) : (
-          /* Responsive to Theme */
+          /* Responsive to Theme — Pure CSS class toggling prevents any hydration or state-lag glitch */
           <>
             <img
               src="/images/logo/logo-light.png"
               alt="Public Intel Security Africa"
-              className={`${logoHeights[size]} w-auto object-contain ${isDark ? 'hidden' : 'block'} dark:hidden transition-transform duration-200 group-hover:scale-[1.01]`}
+              className={`${logoHeights[size]} w-auto object-contain block dark:hidden transition-transform duration-200 group-hover:scale-[1.01]`}
               loading="eager"
-              decoding="async"
+              fetchPriority="high"
+              decoding="sync"
             />
             <img
               src="/images/logo/logo-dark.png"
               alt="Public Intel Security Africa"
-              className={`${logoHeights[size]} w-auto object-contain ${isDark ? 'block' : 'hidden'} hidden dark:block transition-transform duration-200 group-hover:scale-[1.01]`}
+              className={`${logoHeights[size]} w-auto object-contain hidden dark:block transition-transform duration-200 group-hover:scale-[1.01]`}
               loading="eager"
-              decoding="async"
+              fetchPriority="high"
+              decoding="sync"
             />
           </>
         )}
@@ -70,11 +74,11 @@ export default function Logo({
       {/* Shorter, Highly Detailed & Fine Credential Tagline */}
       {showTagline && (
         <div className="mt-1 flex items-center gap-1 sm:gap-1.5 text-[8px] sm:text-[9px] md:text-[9.5px] uppercase font-mono tracking-wider">
-          <span className={`font-bold transition-colors ${isDark ? 'text-amber-400' : 'text-amber-700 dark:text-amber-400'}`}>
+          <span className={`font-bold transition-colors ${isExplicitDark ? 'text-amber-400' : isExplicitLight ? 'text-amber-700' : 'text-amber-700 dark:text-amber-400'}`}>
             POWERED BY
           </span>
-          <span className={`text-[7px] transition-colors ${isDark ? 'text-slate-600' : 'text-slate-400 dark:text-slate-600'}`}>•</span>
-          <span className={`font-medium transition-colors ${isDark ? 'text-slate-400' : 'text-slate-600 dark:text-slate-400'}`}>
+          <span className={`text-[7px] transition-colors ${isExplicitDark ? 'text-slate-600' : isExplicitLight ? 'text-slate-400' : 'text-slate-400 dark:text-slate-600'}`}>•</span>
+          <span className={`font-medium transition-colors ${isExplicitDark ? 'text-slate-400' : isExplicitLight ? 'text-slate-600' : 'text-slate-600 dark:text-slate-400'}`}>
             PLUGINS MEDIA
           </span>
         </div>

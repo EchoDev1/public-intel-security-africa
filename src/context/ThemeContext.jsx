@@ -17,31 +17,22 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     setMounted(true);
     try {
-      const stored = localStorage.getItem('pi-theme');
-      if (stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        setThemeState('dark');
-        document.documentElement.classList.add('dark');
-      } else {
-        setThemeState('light');
-        document.documentElement.classList.remove('dark');
-      }
-    } catch (e) {
-      // ignore
-    }
+      // White background (light mode) is always the initial primary background when opening the website
+      localStorage.removeItem('pi-theme');
+      document.documentElement.classList.remove('dark');
+      setThemeState('light');
+    } catch (_) {}
   }, []);
 
   const setTheme = (newTheme) => {
     setThemeState(newTheme);
     try {
-      localStorage.setItem('pi-theme', newTheme);
       if (newTheme === 'dark') {
         document.documentElement.classList.add('dark');
       } else {
         document.documentElement.classList.remove('dark');
       }
-    } catch (e) {
-      // ignore
-    }
+    } catch (_) {}
   };
 
   const toggleTheme = () => {

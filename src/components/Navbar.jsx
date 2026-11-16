@@ -143,7 +143,7 @@ export default function Navbar() {
           
           {/* Brand Identity */}
           <div className="w-full md:w-auto flex items-center justify-start shrink-0">
-            <Logo variant={isDark ? "dark" : "light"} size="default" />
+            <Logo variant="auto" size="default" />
           </div>
 
           {/* Right Action Widgets */}
@@ -424,7 +424,7 @@ export default function Navbar() {
               
               {/* Drawer Top Header */}
               <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
-                <Logo variant={isDark ? "dark" : "light"} size="compact" showTagline={true} />
+                <Logo variant="auto" size="compact" showTagline={true} />
                 <div className="flex items-center gap-2">
                   <button
                     onClick={toggleTheme}
