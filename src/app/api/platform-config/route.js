@@ -31,6 +31,26 @@ const DEFAULT_FOOTER = {
   hotlinePhone: 'Signal / PGP: 09090001515'
 };
 
+function ensureTikTokLink(links) {
+  if (!Array.isArray(links)) return INITIAL_SOCIAL_LINKS;
+  const hasTikTok = links.some((s) => (s.platform || '').toLowerCase().includes('tiktok'));
+  if (hasTikTok) return links;
+  const tiktokDefault = INITIAL_SOCIAL_LINKS.find((s) => (s.platform || '').toLowerCase().includes('tiktok'));
+  return tiktokDefault ? [...links, tiktokDefault] : links;
+}
+
+function normalizeFooterSettings(settings) {
+  if (!settings || typeof settings !== 'object') return DEFAULT_FOOTER;
+  const next = { ...DEFAULT_FOOTER, ...settings };
+  if (!next.hotlineEmail || next.hotlineEmail === 'tips@publicintel.africa' || next.hotlineEmail === 'tips@publicintelsecurity.africa') {
+    next.hotlineEmail = DEFAULT_FOOTER.hotlineEmail;
+  }
+  if (!next.hotlinePhone || next.hotlinePhone === 'Signal / PGP: +234 800-PUBLIC-INTEL') {
+    next.hotlinePhone = DEFAULT_FOOTER.hotlinePhone;
+  }
+  return next;
+}
+
 const DEFAULT_DIVISIONS = SPECIALIZED_HUBS.map((h, idx) => ({
   id: `div-${idx + 1}`,
   name: h.name,
@@ -101,12 +121,12 @@ export async function GET(request) {
     }
 
     if (section === 'footer') {
-      const footerSettings = await getContent('footer_settings', DEFAULT_FOOTER);
+      const footerSettings = normalizeFooterSettings(await getContent('footer_settings', DEFAULT_FOOTER));
       return NextResponse.json({ success: true, footerSettings }, { headers: NO_CACHE_HEADERS });
     }
 
     if (section === 'socials') {
-      const socialLinks = await getContent('social_links', INITIAL_SOCIAL_LINKS);
+      const socialLinks = ensureTikTokLink(await getContent('social_links', INITIAL_SOCIAL_LINKS));
       return NextResponse.json({ success: true, socialLinks }, { headers: NO_CACHE_HEADERS });
     }
 
@@ -121,13 +141,16 @@ export async function GET(request) {
     }
 
     // Default: return all configuration
-    const [headerSettings, footerSettings, socialLinks, specializedDivisions, editorialTeam] = await Promise.all([
+    const [headerSettings, rawFooterSettings, rawSocialLinks, specializedDivisions, editorialTeam] = await Promise.all([
       getContent('header_settings', DEFAULT_HEADER),
       getContent('footer_settings', DEFAULT_FOOTER),
       getContent('social_links', INITIAL_SOCIAL_LINKS),
       getContent('specialized_divisions', DEFAULT_DIVISIONS),
       getContent('editorial_team', DEFAULT_EDITORIAL_TEAM)
     ]);
+
+    const footerSettings = normalizeFooterSettings(rawFooterSettings);
+    const socialLinks = ensureTikTokLink(rawSocialLinks);
 
     return NextResponse.json({
       success: true,
