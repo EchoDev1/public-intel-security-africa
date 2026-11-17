@@ -27,8 +27,8 @@ const DEFAULT_FOOTER = {
   headOffice: 'Plot 428 Constitution Ave, Central Business District, Abuja, FCT, Nigeria',
   nairobiOffice: 'Riverside Square, 5th Floor Defense Media Wing, Nairobi, Kenya',
   copyright: `Public Intel Security Africa. A Multi-Platform Media Production of Plugins Media Limited. All rights reserved.`,
-  hotlineEmail: 'tips@publicintel.africa',
-  hotlinePhone: 'Signal / PGP: +234 800-PUBLIC-INTEL'
+  hotlineEmail: 'Info@publicintelsecurity.africa',
+  hotlinePhone: 'Signal / PGP: 09090001515'
 };
 
 const DEFAULT_DIVISIONS = SPECIALIZED_HUBS.map((h, idx) => ({

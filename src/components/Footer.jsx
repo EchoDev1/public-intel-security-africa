@@ -24,8 +24,8 @@ const DEFAULT_FOOTER_SETTINGS = {
   headOffice: 'Plot 428 Constitution Ave, Central Business District, Abuja / Lagos, Nigeria',
   nairobiOffice: 'Riverside Square, Nairobi, Kenya',
   copyright: 'Public Intel Security Africa. A Multi-Platform Media Production of Plugins Media Limited. All rights reserved.',
-  hotlineEmail: 'tips@publicintelsecurity.africa',
-  hotlinePhone: 'Signal / PGP: +234 800-PUBLIC-INTEL'
+  hotlineEmail: 'Info@publicintelsecurity.africa',
+  hotlinePhone: 'Signal / PGP: 09090001515'
 };
 
 const DEFAULT_BUREAUS = [
@@ -157,8 +157,8 @@ export default function Footer() {
               For high-risk confidential disclosures, investigative tips, and verified leaks:
             </p>
             <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-1 font-mono text-[11px]">
-              <div className="text-amber-400 font-bold">{footerSettings.hotlineEmail || 'tips@publicintelsecurity.africa'}</div>
-              <div className="text-slate-300">{footerSettings.hotlinePhone || 'Signal / PGP: +234 800-PUBLIC-INTEL'}</div>
+              <div className="text-amber-400 font-bold">{footerSettings.hotlineEmail || 'Info@publicintelsecurity.africa'}</div>
+              <div className="text-slate-300">{footerSettings.hotlinePhone || 'Signal / PGP: 09090001515'}</div>
             </div>
             <Link
               href="/eyewitness-reports"

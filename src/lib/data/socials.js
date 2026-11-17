@@ -75,5 +75,16 @@ export const INITIAL_SOCIAL_LINKS = [
     followers: '54.1K',
     status: 'Active',
     color: 'hover:text-pink-500'
+  },
+  {
+    id: 'soc-08',
+    platform: 'TikTok',
+    handle: '@publicintel.africa',
+    url: 'https://www.tiktok.com/@publicintel.africa',
+    icon: 'TikTok',
+    category: 'Short-Form Field Briefings & Reels',
+    followers: '32.0K',
+    status: 'Active',
+    color: 'hover:text-pink-400'
   }
 ];

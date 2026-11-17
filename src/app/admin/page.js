@@ -272,7 +272,7 @@ export default function AdminDashboardPage() {
   const [tvChannels, setTvChannels] = useState([
     {
       id: 'tv-01',
-      title: 'PI Television Daily Prime Broadcast',
+      title: 'Public Intel Television Daily Prime Broadcast',
       platform: 'YouTube Live',
       videoUrl: 'https://www.youtube.com/watch?v=live_stream_pi',
       joinLink: 'https://youtube.com',
@@ -6553,7 +6553,7 @@ CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL USING (public.is
                 <input
                   type="text"
                   required
-                  placeholder="e.g. PI Television Live Defense Newsfeed"
+                  placeholder="e.g. Public Intel Television Live Defense Newsfeed"
                   value={newMediaItem.title}
                   onChange={(e) => setNewMediaItem({ ...newMediaItem, title: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-bold"

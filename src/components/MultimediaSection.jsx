@@ -49,7 +49,7 @@ export default function MultimediaSection() {
               }`}
             >
               <Tv className="w-3.5 h-3.5" />
-              <span>PI Television</span>
+              <span>Public Intel Television</span>
             </button>
 
             <button
